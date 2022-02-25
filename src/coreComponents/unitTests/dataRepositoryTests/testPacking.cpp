@@ -22,8 +22,9 @@
 
 #include "dataRepository/wrapperHelpers.hpp"
 
-#include <ctime>
 #include <cstdlib>
+#include <ctime>
+#include <numeric>
 
 using namespace geosx;
 
@@ -215,6 +216,81 @@ TEST( testPacking, testPackByIndexDevice )
       EXPECT_EQ( veloc[ii], unpacked[ii] );
     }
   }
+}
+
+
+TEST( testPacking, testPackDataByIndexDevice )
+{
+  // Create the data for 1d, 2d, and 3d arrays
+  localIndex const ni = 2, nj = 3, nk = 5;
+
+  array1d< int > input1d( ni );
+  for( int i = 0; i < input1d.size(); ++i )
+  {
+    input1d( i ) = i;
+  }
+
+  array2d< int > input2d( ni, nj );
+  for( localIndex i = 0; i < input2d.size( 0 ); ++i )
+  {
+    for( localIndex j = 0; j < input2d.size( 1 ); ++j )
+    {
+      input2d( i, j ) = j + nj * i;
+    }
+  }
+
+  array3d< int > input3d( ni, nj, nk );
+  for( localIndex i = 0; i < input3d.size( 0 ); ++i )
+  {
+    for( localIndex j = 0; j < input3d.size( 1 ); ++j )
+    {
+      for( localIndex k = 0; k < input3d.size( 2 ); ++k )
+      {
+        input3d( i, j, k ) = k + nk * ( j + nj * i );
+      }
+    }
+  }
+
+  // This is the generic validation function.
+  auto validate = []( auto const & input ) -> void
+  {
+    localIndex const n = input.size();
+
+    // `input` can be a multiple dimensions array, but it should contain the continuous range from 0 to n - 1.
+    for( int i = 0; i < n; ++i )
+    {
+      ASSERT_EQ( input.data()[i], i );
+    }
+
+    array1d< localIndex > indices( n );
+    std::iota( indices.begin(), indices.end(), 0 );
+
+    parallelDeviceEvents packEvents;
+
+    buffer_type buffer;
+
+    buffer_unit_type * dummy = buffer.data();
+    localIndex calcSize = bufferOps::PackDataByIndexDevice< false >( dummy, input.toViewConst(), indices.toViewConst(), packEvents );
+
+    buffer.resize( calcSize );
+    buffer_unit_type * b = buffer.data();
+    localIndex packedSize = bufferOps::PackDataByIndexDevice< true >( b, input.toViewConst(), indices.toViewConst(), packEvents );
+
+    int const * const tmp = reinterpret_cast< int * >( buffer.data() );
+    std::vector< int > const result( tmp, tmp + n );
+    std::vector< int > expected( n );
+    std::iota( expected.begin(), expected.end(), 0 );
+
+    ASSERT_EQ( result, expected );
+    ASSERT_EQ( calcSize, packedSize );
+    ASSERT_EQ( calcSize, buffer.size() );
+    ASSERT_EQ( calcSize, n * sizeof( int ) / sizeof( buffer_unit_type ) );
+  };
+
+  // Actually perform the test.
+  validate( input1d );
+  validate( input2d );
+  validate( input3d );
 }
 
 
