@@ -170,22 +170,6 @@ private:
 namespace extrinsicMeshData
 {
 
-EXTRINSIC_MESH_DATA_TRAIT( Pressure_nm1,
-                           "pressure_nm1",
-                           array1d< real64 >,
-                           0,
-                           NOPLOT,
-                           WRITE_AND_READ,
-                           "Scalar pressure at time n-1." );
-
-EXTRINSIC_MESH_DATA_TRAIT( Pressure_n,
-                           "pressure_n",
-                           array1d< real64 >,
-                           0,
-                           NOPLOT,
-                           WRITE_AND_READ,
-                           "Scalar pressure at time n." );
-
 EXTRINSIC_MESH_DATA_TRAIT( Pressure_np1,
                            "pressure_np1",
                            array1d< real64 >,
@@ -193,6 +177,30 @@ EXTRINSIC_MESH_DATA_TRAIT( Pressure_np1,
                            LEVEL_0,
                            WRITE_AND_READ,
                            "Scalar pressure at time n+1." );
+
+EXTRINSIC_MESH_DATA_TRAIT( Velocity_x,
+                           "velocity_x",
+                           array2d< real64 >,
+                           0,
+                           LEVEL_0,
+                           WRITE_AND_READ,
+                           "Velocity in the x-direction." );
+
+EXTRINSIC_MESH_DATA_TRAIT( Velocity_y,
+                           "velocity_y",
+                           array2d< real64 >,
+                           0,
+                           LEVEL_0,
+                           WRITE_AND_READ,
+                           "Velocity in the y-direction." );
+
+EXTRINSIC_MESH_DATA_TRAIT( Velocity_z,
+                           "velocity_z",
+                           array2d< real64 >,
+                           0,
+                           LEVEL_0,
+                           WRITE_AND_READ,
+                           "Velocity in the z-direction." );                                                      
 
 EXTRINSIC_MESH_DATA_TRAIT( ForcingRHS,
                            "rhs",
@@ -225,6 +233,14 @@ EXTRINSIC_MESH_DATA_TRAIT( MediumVelocity,
                            NOPLOT,
                            WRITE_AND_READ,
                            "Medium velocity of the cell" );
+
+EXTRINSIC_MESH_DATA_TRAIT( MediumDensity,
+                           "mediumDensity",
+                           array1d< real64 >,
+                           0,
+                           NOPLOT,
+                           WRITE_AND_READ,
+                           "Medium density of the cell" );                           
 
 EXTRINSIC_MESH_DATA_TRAIT( StiffnessVector,
                            "stiffnessVector",

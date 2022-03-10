@@ -108,9 +108,7 @@ void AcousticWaveEquationSEM::registerDataOnMesh( Group & meshBodies )
   {
     NodeManager & nodeManager = mesh.getNodeManager();
 
-    nodeManager.registerExtrinsicData< extrinsicMeshData::Pressure_nm1,
-                                       extrinsicMeshData::Pressure_n,
-                                       extrinsicMeshData::Pressure_np1,
+    nodeManager.registerExtrinsicData< extrinsicMeshData::Pressure_np1,
                                        extrinsicMeshData::ForcingRHS,
                                        extrinsicMeshData::MassVector,
                                        extrinsicMeshData::DampingVector,
@@ -125,6 +123,29 @@ void AcousticWaveEquationSEM::registerDataOnMesh( Group & meshBodies )
     elemManager.forElementSubRegions< CellElementSubRegion >( [&]( CellElementSubRegion & subRegion )
     {
       subRegion.registerExtrinsicData< extrinsicMeshData::MediumVelocity >( this->getName() );
+      subRegion.registerExtrinsicData< extrinsicMeshData::MediumDensity >( this->getName() );
+
+      subRegion.registerExtrinsicData< extrinsicMeshData::Velocity_x >( this->getName() );
+      subRegion.registerExtrinsicData< extrinsicMeshData::Velocity_y >( this->getName() );
+      subRegion.registerExtrinsicData< extrinsicMeshData::Velocity_z >( this->getName() );
+  
+      finiteElement::FiniteElementBase const & fe = subRegion.getReference< finiteElement::FiniteElementBase >( getDiscretizationName() );
+
+      finiteElement::dispatch3D( fe,
+                                 [&]
+                                    ( auto const finiteElement )
+      {
+
+        using FE_TYPE = TYPEOFREF( finiteElement );
+
+        constexpr localIndex numNodesPerElem = FE_TYPE::numNodes;
+
+        subRegion.getExtrinsicData< extrinsicMeshData::Velocity_x >().resizeDimension < 1 > ( numNodesPerElem );
+        subRegion.getExtrinsicData< extrinsicMeshData::Velocity_y >().resizeDimension < 1 > ( numNodesPerElem );
+        subRegion.getExtrinsicData< extrinsicMeshData::Velocity_z >().resizeDimension < 1 > ( numNodesPerElem );
+
+      } );
+
     } );
   } );
 }
@@ -397,6 +418,7 @@ void AcousticWaveEquationSEM::initializePostInitialConditionsPreSubGroups()
       arrayView2d< localIndex const, cells::NODE_MAP_USD > const elemsToNodes = elementSubRegion.nodeList();
       arrayView2d< localIndex const > const elemsToFaces = elementSubRegion.faceList();
       arrayView1d< real64 const > const velocity = elementSubRegion.getExtrinsicData< extrinsicMeshData::MediumVelocity >();
+      arrayView1d< real64 const > const density = elementSubRegion.getExtrinsicData< extrinsicMeshData::MediumDensity >();
 
       finiteElement::FiniteElementBase const &
       fe = elementSubRegion.getReference< finiteElement::FiniteElementBase >( getDiscretizationName() );
@@ -423,6 +445,7 @@ void AcousticWaveEquationSEM::initializePostInitialConditionsPreSubGroups()
           freeSurfaceFaceIndicator,
           faceNormal,
           velocity,
+          density,
           mass,
           damping );
       } );
@@ -439,8 +462,8 @@ void AcousticWaveEquationSEM::applyFreeSurfaceBC( real64 const time, DomainParti
   FaceManager & faceManager = domain.getMeshBody( 0 ).getMeshLevel( 0 ).getFaceManager();
   NodeManager & nodeManager = domain.getMeshBody( 0 ).getMeshLevel( 0 ).getNodeManager();
 
-  arrayView1d< real64 > const p_nm1 = nodeManager.getExtrinsicData< extrinsicMeshData::Pressure_nm1 >();
-  arrayView1d< real64 > const p_n = nodeManager.getExtrinsicData< extrinsicMeshData::Pressure_n >();
+  // arrayView1d< real64 > const p_nm1 = nodeManager.getExtrinsicData< extrinsicMeshData::Pressure_nm1 >();
+  // arrayView1d< real64 > const p_n = nodeManager.getExtrinsicData< extrinsicMeshData::Pressure_n >();
   arrayView1d< real64 > const p_np1 = nodeManager.getExtrinsicData< extrinsicMeshData::Pressure_np1 >();
 
   ArrayOfArraysView< localIndex const > const faceToNodeMap = faceManager.nodeList().toViewConst();
@@ -482,8 +505,8 @@ void AcousticWaveEquationSEM::applyFreeSurfaceBC( real64 const time, DomainParti
           freeSurfaceNodeIndicator[dof] = 1;
 
           p_np1[dof] = value;
-          p_n[dof]   = value;
-          p_nm1[dof] = value;
+          //p_n[dof]   = value;
+          //p_nm1[dof] = value;
         }
       }
     }
@@ -524,48 +547,88 @@ real64 AcousticWaveEquationSEM::explicitStep( real64 const & time_n,
     NodeManager & nodeManager = mesh.getNodeManager();
 
     arrayView1d< real64 const > const mass = nodeManager.getExtrinsicData< extrinsicMeshData::MassVector >();
-    arrayView1d< real64 const > const damping = nodeManager.getExtrinsicData< extrinsicMeshData::DampingVector >();
+    //arrayView1d< real64 const > const damping = nodeManager.getExtrinsicData< extrinsicMeshData::DampingVector >();
 
-    arrayView1d< real64 > const p_nm1 = nodeManager.getExtrinsicData< extrinsicMeshData::Pressure_nm1 >();
-    arrayView1d< real64 > const p_n = nodeManager.getExtrinsicData< extrinsicMeshData::Pressure_n >();
+    // arrayView1d< real64 > const p_nm1 = nodeManager.getExtrinsicData< extrinsicMeshData::Pressure_nm1 >();
+    // arrayView1d< real64 > const p_n = nodeManager.getExtrinsicData< extrinsicMeshData::Pressure_n >();
     arrayView1d< real64 > const p_np1 = nodeManager.getExtrinsicData< extrinsicMeshData::Pressure_np1 >();
 
     arrayView1d< localIndex const > const freeSurfaceNodeIndicator = nodeManager.getExtrinsicData< extrinsicMeshData::FreeSurfaceNodeIndicator >();
-    arrayView1d< real64 > const stiffnessVector = nodeManager.getExtrinsicData< extrinsicMeshData::StiffnessVector >();
+    //arrayView1d< real64 > const stiffnessVector = nodeManager.getExtrinsicData< extrinsicMeshData::StiffnessVector >();
     arrayView1d< real64 > const rhs = nodeManager.getExtrinsicData< extrinsicMeshData::ForcingRHS >();
-
-    auto kernelFactory = acousticWaveEquationSEMKernels::ExplicitAcousticSEMFactory( dt );
-
-    finiteElement::
-      regionBasedKernelApplication< EXEC_POLICY,
-                                    constitutive::NullModel,
-                                    CellElementSubRegion >( mesh,
-                                                            regionNames,
-                                                            getDiscretizationName(),
-                                                            "",
-                                                            kernelFactory );
 
     addSourceToRightHandSide( cycleNumber, rhs );
 
-    /// calculate your time integrators
-    real64 const dt2 = dt*dt;
+    // forTargetRegionsComplete( mesh, [&]( localIndex const,
+    //                                      localIndex const,
+    //                                      ElementRegionBase & elemRegion )
 
-    GEOSX_MARK_SCOPE ( updateP );
-    forAll< EXEC_POLICY >( nodeManager.size(), [=] GEOSX_HOST_DEVICE ( localIndex const a )
-    {
-      if( freeSurfaceNodeIndicator[a] != 1 )
+    // { 
+       mesh.getElemManager().forElementSubRegions< CellElementSubRegion >( regionNames, [&]( localIndex const,
+                                                                                          CellElementSubRegion & elementSubRegion )
       {
-        p_np1[a] = p_n[a];
-        p_np1[a] *= 2.0*mass[a];
-        p_np1[a] -= (mass[a]-0.5*dt*damping[a])*p_nm1[a];
-        p_np1[a] += dt2*(rhs[a]-stiffnessVector[a]);
-        p_np1[a] /= mass[a]+0.5*dt*damping[a];
-      }
-    } );
+
+        arrayView1d< real64 const > const density = elementSubRegion.getExtrinsicData< extrinsicMeshData::MediumDensity >();
+
+        arrayView2d< real64 > const velocityx = elementSubRegion.getExtrinsicData< extrinsicMeshData::Velocity_x >();
+        arrayView2d< real64 > const velocityy = elementSubRegion.getExtrinsicData< extrinsicMeshData::Velocity_y >();
+        arrayView2d< real64 > const velocityz = elementSubRegion.getExtrinsicData< extrinsicMeshData::Velocity_z >();
+
+        auto kernelFactory = acousticWaveEquationSEMKernels::ExplicitAcousticPressureSEMFactory( dt );
+
+        finiteElement::
+        regionBasedKernelApplication< EXEC_POLICY,
+                                      constitutive::NullModel,
+                                      CellElementSubRegion >( mesh,
+                                                              regionNames,
+                                                              getDiscretizationName(),
+                                                              "",
+                                                              kernelFactory );
+
+        auto kernelFactory2 = acousticWaveEquationSEMKernels::ExplicitAcousticVelocitySEMFactory( velocityx,
+                                                                                                  velocityy,
+                                                                                                  velocityz,
+                                                                                                  dt );
+
+        finiteElement::
+        regionBasedKernelApplication< EXEC_POLICY,
+                                      constitutive::NullModel,
+                                      CellElementSubRegion >( mesh,
+                                                              regionNames,
+                                                              getDiscretizationName(),
+                                                              "",
+                                                              kernelFactory2 );
+
+
+      } );
+
+    // } );
+
+
+    // addSourceToRightHandSide( cycleNumber, rhs );
+
+    // /// calculate your time integrators
+    // real64 const dt2 = dt*dt;
+
+    // GEOSX_MARK_SCOPE ( updateP );
+    // forAll< EXEC_POLICY >( nodeManager.size(), [=] GEOSX_HOST_DEVICE ( localIndex const a )
+    // {
+    //   if( freeSurfaceNodeIndicator[a] != 1 )
+    //   {
+    //     p_np1[a] = p_n[a];
+    //     p_np1[a] *= 2.0*mass[a];
+    //     p_np1[a] -= (mass[a]-0.5*dt*damping[a])*p_nm1[a];
+    //     p_np1[a] += dt2*(rhs[a]-stiffnessVector[a]);
+    //     p_np1[a] /= mass[a]+0.5*dt*damping[a];
+    //   }
+    // } );
 
     /// synchronize pressure fields
     std::map< string, string_array > fieldNames;
     fieldNames["node"].emplace_back( extrinsicMeshData::Pressure_np1::key() );
+    fieldNames["elems"].emplace_back( extrinsicMeshData::Velocity_x::key() );
+    fieldNames["elems"].emplace_back( extrinsicMeshData::Velocity_y::key() );
+    fieldNames["elems"].emplace_back( extrinsicMeshData::Velocity_z::key() );
 
     CommunicationTools & syncFields = CommunicationTools::getInstance();
     syncFields.synchronizeFields( fieldNames,
@@ -573,19 +636,19 @@ real64 AcousticWaveEquationSEM::explicitStep( real64 const & time_n,
                                   domain.getNeighbors(),
                                   true );
 
-    forAll< EXEC_POLICY >( nodeManager.size(), [=] GEOSX_HOST_DEVICE ( localIndex const a )
-    {
-      p_nm1[a] = p_n[a];
-      p_n[a]   = p_np1[a];
+    // forAll< EXEC_POLICY >( nodeManager.size(), [=] GEOSX_HOST_DEVICE ( localIndex const a )
+    // {
+    //   p_nm1[a] = p_n[a];
+    //   p_n[a]   = p_np1[a];
 
-      stiffnessVector[a] = 0.0;
-      rhs[a] = 0.0;
-    } );
+    //   stiffnessVector[a] = 0.0;
+    //   rhs[a] = 0.0;
+    // } );
 
     real64 const checkSeismo = m_dtSeismoTrace*m_indexSeismoTrace;
     if( (time_n-epsilonLoc) <= checkSeismo && checkSeismo < (time_n + dt) )
     {
-      computeSeismoTrace( time_n, dt, m_indexSeismoTrace, p_np1, p_n );
+      computeSeismoTrace( time_n, dt, m_indexSeismoTrace, p_np1, p_np1 );
       m_indexSeismoTrace++;
     }
 
