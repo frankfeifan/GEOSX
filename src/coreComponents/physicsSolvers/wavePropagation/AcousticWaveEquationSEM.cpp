@@ -574,18 +574,8 @@ real64 AcousticWaveEquationSEM::explicitStep( real64 const & time_n,
         arrayView2d< real64 > const velocityy = elementSubRegion.getExtrinsicData< extrinsicMeshData::Velocity_y >();
         arrayView2d< real64 > const velocityz = elementSubRegion.getExtrinsicData< extrinsicMeshData::Velocity_z >();
 
-        auto kernelFactory = acousticWaveEquationSEMKernels::ExplicitAcousticPressureSEMFactory( dt );
 
-        finiteElement::
-        regionBasedKernelApplication< EXEC_POLICY,
-                                      constitutive::NullModel,
-                                      CellElementSubRegion >( mesh,
-                                                              regionNames,
-                                                              getDiscretizationName(),
-                                                              "",
-                                                              kernelFactory );
-
-        auto kernelFactory2 = acousticWaveEquationSEMKernels::ExplicitAcousticVelocitySEMFactory( velocityx,
+       auto kernelFactory = acousticWaveEquationSEMKernels::ExplicitAcousticVelocitySEMFactory( velocityx,
                                                                                                   velocityy,
                                                                                                   velocityz,
                                                                                                   dt );
@@ -597,7 +587,20 @@ real64 AcousticWaveEquationSEM::explicitStep( real64 const & time_n,
                                                               regionNames,
                                                               getDiscretizationName(),
                                                               "",
+                                                              kernelFactory );
+
+        auto kernelFactory2 = acousticWaveEquationSEMKernels::ExplicitAcousticPressureSEMFactory( dt );
+
+        finiteElement::
+        regionBasedKernelApplication< EXEC_POLICY,
+                                      constitutive::NullModel,
+                                      CellElementSubRegion >( mesh,
+                                                              regionNames,
+                                                              getDiscretizationName(),
+                                                              "",
                                                               kernelFactory2 );
+
+       
 
 
       } );

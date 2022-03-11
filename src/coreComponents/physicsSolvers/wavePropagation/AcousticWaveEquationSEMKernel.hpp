@@ -756,8 +756,8 @@ public:
       for (localIndex i = 0; i < numNodesPerElem; ++i)
       {
         real64 dfx2 = detJ*gradN[j][0]*N[i];
-        real64 dfy2 = detJ*gradN[j][0]*N[i];
-        real64 dfz2 = detJ*gradN[j][0]*N[i];
+        real64 dfy2 = detJ*gradN[j][1]*N[i];
+        real64 dfz2 = detJ*gradN[j][2]*N[i];
 
         flowx[i] += dfx2*m_p_np1[m_elemsToNodes[k][j]];
         flowy[i] += dfy2*m_p_np1[m_elemsToNodes[k][j]];
