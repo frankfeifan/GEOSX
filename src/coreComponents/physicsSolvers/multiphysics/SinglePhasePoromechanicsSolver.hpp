@@ -33,9 +33,9 @@ class SinglePhaseBase;
 class SinglePhasePoromechanicsSolver : public SolverBase
 {
 public:
+
   SinglePhasePoromechanicsSolver( const string & name,
                                   Group * const parent );
-  ~SinglePhasePoromechanicsSolver() override;
 
   /**
    * @brief name of the node manager in the object catalog
@@ -138,7 +138,7 @@ protected:
 
 private:
 
-  void createPreconditioner();
+  void createPreconditioner( DomainPartition & domain );
 
 };
 

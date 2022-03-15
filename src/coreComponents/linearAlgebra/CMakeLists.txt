@@ -22,6 +22,7 @@ set( linearAlgebra_headers
      multiscale/MeshObjectManager.hpp
      multiscale/MeshUtils.hpp
      multiscale/MetisPartitioner.hpp
+     multiscale/MsrsbCoupledLevelBuilder.hpp
      multiscale/MsrsbLevelBuilder.hpp
      multiscale/MsrsbUtils.hpp
      multiscale/MultiscalePreconditioner.hpp
@@ -35,6 +36,7 @@ set( linearAlgebra_headers
      solvers/PreconditionerBlockJacobi.hpp
      solvers/PreconditionerIdentity.hpp
      solvers/PreconditionerJacobi.hpp
+     solvers/PreconditionerNull.hpp
      solvers/SeparateComponentPreconditioner.hpp
      utilities/Arnoldi.hpp
      utilities/BlockOperator.hpp
@@ -65,6 +67,7 @@ set( linearAlgebra_sources
      multiscale/MeshObjectManager.cpp
      multiscale/MeshUtils.cpp
      multiscale/MetisPartitioner.cpp
+     multiscale/MsrsbCoupledLevelBuilder.cpp
      multiscale/MsrsbLevelBuilder.cpp
      multiscale/MsrsbUtils.cpp
      multiscale/MultiscalePreconditioner.cpp

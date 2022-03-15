@@ -310,7 +310,7 @@ void DofManager::addField( string const & fieldName,
   GEOSX_ASSERT_MSG( m_domain != nullptr, "Domain has not been set" );
   GEOSX_ERROR_IF( m_reordered, "Cannot add fields after reorderByRank() has been called." );
   GEOSX_ERROR_IF( fieldExists( fieldName ), "Requested field name '" << fieldName << "' already exists." );
-  GEOSX_ERROR_IF_GT_MSG( components, MAX_COMP, "Number of components limit exceeded" );
+  GEOSX_ERROR_IF_GT_MSG( components, maxNumComp, "Number of components limit exceeded" );
 
   m_fields.emplace_back();
   FieldDescription & field = m_fields.back();

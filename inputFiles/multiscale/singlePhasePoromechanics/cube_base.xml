@@ -6,12 +6,12 @@
     <InternalMesh
       name="mesh"
       elementTypes="{ C3D8 }"
-      xCoords="{ 0, 100 }"
-      yCoords="{ 0, 100 }"
-      zCoords="{ 0, 100 }"
-      nx="{ 30 }"
-      ny="{ 30 }"
-      nz="{ 30 }"
+      xCoords="{ 0, 1 }"
+      yCoords="{ 0, 1 }"
+      zCoords="{ 0, 1 }"
+      nx="{ 10 }"
+      ny="{ 10 }"
+      nz="{ 10 }"
       cellBlockNames="{ hex }"/>
   </Mesh>
 
@@ -21,18 +21,25 @@
     <PeriodicEvent
       name="solverApplications"
       forceDt="1.0"
-      target="/Solvers/flowSolver"/>
+      target="/Solvers/poroSolver"/>
+
     <PeriodicEvent
       name="outputs"
-      timeFrequency="1.0"
+      timeFrequency="10.0"
       targetExactTimestep="1"
       target="/Outputs/vtkOutput"/>
   </Events>
 
   <NumericalMethods>
+    <FiniteElements>
+      <FiniteElementSpace
+        name="FE1"
+        order="1"/>
+    </FiniteElements>
+
     <FiniteVolume>
       <TwoPointFluxApproximation
-        name="singlePhaseTPFA"/>
+        name="tpfa"/>
     </FiniteVolume>
   </NumericalMethods>
 
@@ -40,10 +47,16 @@
     <CellElementRegion
       name="region"
       cellBlocks="{ hex }"
-      materialList="{ water, rock }"/>
+      materialList="{ rock, water }"/>
   </ElementRegions>
 
   <Constitutive>
+    <ElasticIsotropic
+      name="rockSolid"
+      defaultDensity="2700"
+      defaultYoungModulus="1e9"
+      defaultPoissonRatio="0.25"/>
+
     <CompressibleSinglePhaseFluid
       name="water"
       defaultDensity="1000"
@@ -52,24 +65,20 @@
       compressibility="0.0"
       viscosibility="0.0"/>
 
-    <CompressibleSolidConstantPermeability
-      name="rock"
-      solidModelName="nullSolid"
-      porosityModelName="rockPorosity"
-      permeabilityModelName="rockPermeability"/>
-
-    <NullModel
-      name="nullSolid"/>
-
-    <PressurePorosity
+    <BiotPorosity
       name="rockPorosity"
-      defaultReferencePorosity="0.1"
-      referencePressure="0.0"
-      compressibility="0.0"/>
+      grainBulkModulus="1.0e27"
+      defaultReferencePorosity="0.1"/>
 
     <ConstantPermeability
       name="rockPermeability"
-      permeabilityComponents="{ 1.0e-8, 1.0e-8, 1.0e-8 }"/>
+      permeabilityComponents="{ 1.0e-12, 1.0e-12, 1.0e-12 }"/>
+
+    <PorousElasticIsotropic
+      name="rock"
+      solidModelName="rockSolid"
+      porosityModelName="rockPorosity"
+      permeabilityModelName="rockPermeability"/>
   </Constitutive>
 
   <Geometry>
@@ -86,17 +95,41 @@
 
   <FieldSpecifications>
 
+    <FieldSpecification
+      name="x-roller"
+      objectPath="nodeManager"
+      fieldName="TotalDisplacement"
+      component="0"
+      scale="0.0"
+      setNames="{ xneg, xpos }"/>
+
+    <FieldSpecification
+      name="y-roller"
+      objectPath="nodeManager"
+      fieldName="TotalDisplacement"
+      component="1"
+      scale="0.0"
+      setNames="{ yneg, ypos }"/>
+
+    <FieldSpecification
+      name="z-roller"
+      objectPath="nodeManager"
+      fieldName="TotalDisplacement"
+      component="2"
+      scale="0.0"
+      setNames="{ zneg }"/>
+
     <SourceFlux
       name="sourceTerm"
       objectPath="ElementRegions/region"
-      scale="-0.001"
+      scale="-0.1"
       functionName="injectionSchedule"
       setNames="{ source }"/>
 
     <SourceFlux
       name="sinkTerm"
       objectPath="ElementRegions/region"
-      scale="0.001"
+      scale="0.1"
       functionName="injectionSchedule"
       setNames="{ sink }"/>
 
@@ -114,6 +147,6 @@
   <Outputs>
     <VTK
       name="vtkOutput"
-      plotFileRoot="cube_flow"/>
+      plotFileRoot="cube_poro"/>
   </Outputs>
 </Problem>

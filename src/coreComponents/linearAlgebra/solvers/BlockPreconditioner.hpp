@@ -121,11 +121,6 @@ public:
                                 BlockScalingOption const scalingOption );
 
   /**
-   * @brief Destructor.
-   */
-  virtual ~BlockPreconditioner() override;
-
-  /**
    * @brief Setup data for one of the two blocks.
    * @param blockIndex index of the block to set up
    * @param blockDofs choice of DoF components (from a monolithic system)
@@ -139,6 +134,14 @@ public:
   void setupBlock( localIndex const blockIndex,
                    std::vector< DofManager::SubComponent > blockDofs,
                    std::unique_ptr< PreconditionerBase< LAI > > solver,
+                   real64 const scaling = 1.0 );
+
+  /**
+   * @copydoc setupBlock(localIndex,std::vector<DofManager::SubComponent>,std::unique_ptr<PreconditionerBase<LAI>>,real64)
+   */
+  void setupBlock( localIndex const blockIndex,
+                   std::vector< DofManager::SubComponent > blockDofs,
+                   PreconditionerBase< LAI > * const solver,
                    real64 const scaling = 1.0 );
 
   /**
@@ -208,7 +211,9 @@ private:
   BlockOperator< Vector, Matrix > m_matBlocks;
 
   /// Individual block preconditioners
-  std::array< std::unique_ptr< PreconditionerBase< LAI > >, 2 > m_solvers;
+  std::array< PreconditionerBase< LAI > *, 2 > m_solvers;
+
+  std::array< std::unique_ptr< PreconditionerBase< LAI > >, 2 > m_solversOwned;
 
   /// Scaling of each block
   std::array< real64, 2 > m_scaling;

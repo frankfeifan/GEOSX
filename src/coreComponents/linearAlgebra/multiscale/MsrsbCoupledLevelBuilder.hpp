@@ -13,24 +13,25 @@
  */
 
 /**
- * @file MsrsbLevelBuilder.hpp
+ * @file MsrsbCoupledLevelBuilder.hpp
  */
 
-#ifndef GEOSX_LINEARALGEBRA_MULTISCALE_MSRSBSTRATEGY_HPP
-#define GEOSX_LINEARALGEBRA_MULTISCALE_MSRSBSTRATEGY_HPP
+#ifndef GEOSX_MSRSBCOUPLEDLEVELBUILDER_HPP
+#define GEOSX_MSRSBCOUPLEDLEVELBUILDER_HPP
 
-#include "linearAlgebra/common/PreconditionerBase.hpp"
-#include "linearAlgebra/multiscale/MeshLevel.hpp"
-#include "linearAlgebra/multiscale/LevelBuilderBase.hpp"
+#include "linearAlgebra/multiscale/MsrsbLevelBuilder.hpp"
+#include "linearAlgebra/solvers/BlockPreconditioner.hpp"
 
 namespace geosx
 {
+
 namespace multiscale
 {
 
 template< typename LAI >
-class MsrsbLevelBuilder : public LevelBuilderBase< LAI >
+class MsrsbCoupledLevelBuilder : public LevelBuilderBase< LAI >
 {
+
 public:
 
   /// Alias for base type
@@ -45,7 +46,7 @@ public:
   /// Alias for operator type
   using Operator = typename Base::Operator;
 
-  explicit MsrsbLevelBuilder( string name, LinearSolverParameters::Multiscale params );
+  explicit MsrsbCoupledLevelBuilder( string name, LinearSolverParameters::Multiscale params );
 
   virtual Operator const & prolongation() const override
   {
@@ -67,17 +68,7 @@ public:
     return *m_presmoother;
   }
 
-  PreconditionerBase< LAI > & presmoother()
-  {
-    return *m_presmoother;
-  }
-
   virtual PreconditionerBase< LAI > const & postsmoother() const override
-  {
-    return *m_postsmoother;
-  }
-
-  PreconditionerBase< LAI > & postsmoother()
   {
     return *m_postsmoother;
   }
@@ -90,28 +81,12 @@ public:
 
   virtual void compute( Matrix const & fineMatrix ) override;
 
-  multiscale::MeshLevel & mesh() { return m_mesh; }
-  multiscale::MeshLevel const & mesh() const { return m_mesh; }
-
-  integer numComp() const { return m_numComp; }
-
 private:
 
-  void createSmoothers();
-
-  void writeProlongationForDebug() const;
+  void createSmoothers( bool const useBlock );
 
   using Base::m_params;
   using Base::m_name;
-
-  /// Number of dof components
-  integer m_numComp = 1;
-
-  /// Dof location (cell or node)
-  DofManager::Location m_location = DofManager::Location::Node;
-
-  /// Mesh description at current level
-  multiscale::MeshLevel m_mesh;
 
   /// Prolongation matrix P
   Matrix m_prolongation;
@@ -122,23 +97,19 @@ private:
   /// Level operator matrix
   Matrix m_matrix;
 
-  /// Pre-smoothing operator
+  /// Levels for each sub-problem
+  std::vector< std::unique_ptr< MsrsbLevelBuilder< LAI > > > m_builders;
+
+  /// Pre-smoother
   std::unique_ptr< PreconditionerBase< LAI > > m_presmoother;
 
-  /// Post-smoothing operator
+  /// Post-smoother
   std::unique_ptr< PreconditionerBase< LAI > > m_postsmoother;
 
-  /// List of nodes on global boundary
-  array1d< globalIndex > m_boundaryDof;
-
-  /// List of nodes that are interior
-  array1d< globalIndex > m_interiorDof;
-
-  /// Previous number of smoothing iterations
-  integer m_lastNumIter = std::numeric_limits< integer >::max();
 };
 
 } // namespace multiscale
+
 } // namespace geosx
 
-#endif //GEOSX_LINEARALGEBRA_MULTISCALE_MSRSBSTRATEGY_HPP
+#endif //GEOSX_MSRSBCOUPLEDLEVELBUILDER_HPP

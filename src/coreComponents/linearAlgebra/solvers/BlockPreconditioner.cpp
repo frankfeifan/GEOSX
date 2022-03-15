@@ -42,9 +42,6 @@ BlockPreconditioner< LAI >::BlockPreconditioner( BlockShapeOption const shapeOpt
 {}
 
 template< typename LAI >
-BlockPreconditioner< LAI >::~BlockPreconditioner() = default;
-
-template< typename LAI >
 void BlockPreconditioner< LAI >::reinitialize( Matrix const & mat, DofManager const & dofManager )
 {
   MPI_Comm const & comm = mat.comm();
@@ -75,7 +72,25 @@ void BlockPreconditioner< LAI >::setupBlock( localIndex const blockIndex,
   GEOSX_LAI_ASSERT_GT( scaling, 0.0 );
 
   m_blockDofs[blockIndex] = std::move( blockDofs );
-  m_solvers[blockIndex] = std::move( solver );
+  m_solversOwned[blockIndex] = std::move( solver );
+  m_solvers[blockIndex] = m_solversOwned[blockIndex].get();
+  m_scaling[blockIndex] = scaling;
+}
+
+template< typename LAI >
+void BlockPreconditioner< LAI >::setupBlock( localIndex const blockIndex,
+                                             std::vector< DofManager::SubComponent > blockDofs,
+                                             PreconditionerBase< LAI > * const solver,
+                                             real64 const scaling )
+{
+  GEOSX_LAI_ASSERT_GT( 2, blockIndex );
+  GEOSX_LAI_ASSERT( solver );
+  GEOSX_LAI_ASSERT( !blockDofs.empty() );
+  GEOSX_LAI_ASSERT_GT( scaling, 0.0 );
+
+  m_blockDofs[blockIndex] = std::move( blockDofs );
+  m_solversOwned[blockIndex].reset();
+  m_solvers[blockIndex] = solver;
   m_scaling[blockIndex] = scaling;
 }
 

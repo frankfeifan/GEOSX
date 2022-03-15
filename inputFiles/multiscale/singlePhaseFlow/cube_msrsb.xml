@@ -29,12 +29,13 @@
         <Multiscale
           basisType="msrsb"
           maxLevels="3"
-          numSmootherSweeps="2"
-          preOrPostSmoothing="both"
-          smootherType="l1sgs"
           boundarySets="{xneg,xpos,yneg,ypos,zneg,zpos}"
           debugLevel="0"
           coarseType="direct">
+          <Smoother
+            type="l1sgs"
+            preOrPost="both"
+            numSweeps="2"/>
           <Coarsening
             partitionType="cartesian"
             ratio="{ 5, 5, 5 }"

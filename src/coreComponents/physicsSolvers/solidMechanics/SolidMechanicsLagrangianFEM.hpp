@@ -60,18 +60,6 @@ public:
   SolidMechanicsLagrangianFEM( const string & name,
                                Group * const parent );
 
-
-  SolidMechanicsLagrangianFEM( SolidMechanicsLagrangianFEM const & ) = delete;
-  SolidMechanicsLagrangianFEM( SolidMechanicsLagrangianFEM && ) = default;
-
-  SolidMechanicsLagrangianFEM & operator=( SolidMechanicsLagrangianFEM const & ) = delete;
-  SolidMechanicsLagrangianFEM & operator=( SolidMechanicsLagrangianFEM && ) = delete;
-
-  /**
-   * destructor
-   */
-  virtual ~SolidMechanicsLagrangianFEM() override;
-
   /**
    * @return The string that may be used to generate a new instance from the SolverBase::CatalogInterface::CatalogType
    */
@@ -279,7 +267,6 @@ public:
   }
 
 protected:
-  virtual void postProcessInput() override final;
 
   virtual void initializePostInitialConditionsPreSubGroups() override final;
 

@@ -26,12 +26,10 @@
 #include "constitutive/fluid/SingleFluidBase.hpp"
 #include "discretizationMethods/NumericalMethodsManager.hpp"
 #include "finiteElement/Kinematics.h"
+#include "linearAlgebra/multiscale/MultiscalePreconditioner.hpp"
 #include "linearAlgebra/solvers/BlockPreconditioner.hpp"
 #include "linearAlgebra/solvers/SeparateComponentPreconditioner.hpp"
 #include "mesh/DomainPartition.hpp"
-#include "mainInterface/ProblemManager.hpp"
-#include "mesh/MeshForLoopInterface.hpp"
-#include "mesh/utilities/ComputationalGeometry.hpp"
 #include "physicsSolvers/fluidFlow/FlowSolverBaseExtrinsicData.hpp"
 #include "physicsSolvers/fluidFlow/SinglePhaseBase.hpp"
 #include "physicsSolvers/solidMechanics/SolidMechanicsLagrangianFEM.hpp"
@@ -50,7 +48,6 @@ SinglePhasePoromechanicsSolver::SinglePhasePoromechanicsSolver( const string & n
   SolverBase( name, parent ),
   m_solidSolverName(),
   m_flowSolverName()
-
 {
   registerWrapper( viewKeyStruct::solidSolverNameString(), &m_solidSolverName ).
     setInputFlag( InputFlags::REQUIRED ).
@@ -60,10 +57,12 @@ SinglePhasePoromechanicsSolver::SinglePhasePoromechanicsSolver( const string & n
     setInputFlag( InputFlags::REQUIRED ).
     setDescription( "Name of the fluid mechanics solver to use in the poromechanics solver" );
 
-  m_linearSolverParameters.get().mgr.strategy = LinearSolverParameters::MGR::StrategyType::singlePhasePoromechanics;
-  m_linearSolverParameters.get().mgr.separateComponents = true;
-  m_linearSolverParameters.get().mgr.displacementFieldName = keys::TotalDisplacement;
-  m_linearSolverParameters.get().dofsPerNode = 3;
+  LinearSolverParameters & linParams = m_linearSolverParameters.get();
+  linParams.mgr.strategy = LinearSolverParameters::MGR::StrategyType::singlePhasePoromechanics;
+  linParams.mgr.separateComponents = true;
+  linParams.mgr.displacementFieldName = keys::TotalDisplacement;
+  linParams.dofsPerNode = 3;
+  linParams.multiscale.label = "poro";
 }
 
 void SinglePhasePoromechanicsSolver::registerDataOnMesh( Group & meshBodies )
@@ -140,7 +139,7 @@ void SinglePhasePoromechanicsSolver::setupSystem( DomainPartition & domain,
 
   if( !m_precond && m_linearSolverParameters.get().solverType != LinearSolverParameters::SolverType::direct )
   {
-    createPreconditioner();
+    createPreconditioner( domain );
   }
 }
 
@@ -166,19 +165,20 @@ void SinglePhasePoromechanicsSolver::postProcessInput()
 
   m_flowSolver = &this->getParent().getGroup< SinglePhaseBase >( m_flowSolverName );
   m_solidSolver = &this->getParent().getGroup< SolidMechanicsLagrangianFEM >( m_solidSolverName );
+
+  LinearSolverParameters & linParams = m_linearSolverParameters.get();
+  linParams.multiscale.subParams.emplace_back( &m_solidSolver->getLinearSolverParameters().multiscale );
+  linParams.multiscale.subParams.emplace_back( &m_flowSolver->getLinearSolverParameters().multiscale );
 }
 
 void SinglePhasePoromechanicsSolver::initializePostInitialConditionsPreSubGroups()
 {
-  if( m_flowSolver->getLinearSolverParameters().mgr.strategy == LinearSolverParameters::MGR::StrategyType::singlePhaseHybridFVM )
+  using StrategyType = LinearSolverParameters::MGR::StrategyType;
+  LinearSolverParameters & linParams = m_linearSolverParameters.get();
+  if( m_flowSolver->getLinearSolverParameters().mgr.strategy == StrategyType::singlePhaseHybridFVM )
   {
-    m_linearSolverParameters.get().mgr.strategy = LinearSolverParameters::MGR::StrategyType::hybridSinglePhasePoromechanics;
+    linParams.mgr.strategy = StrategyType::hybridSinglePhasePoromechanics;
   }
-}
-
-SinglePhasePoromechanicsSolver::~SinglePhasePoromechanicsSolver()
-{
-  // TODO Auto-generated destructor stub
 }
 
 void SinglePhasePoromechanicsSolver::resetStateToBeginningOfStep( DomainPartition & domain )
@@ -297,9 +297,10 @@ real64 SinglePhasePoromechanicsSolver::calculateResidualNorm( DomainPartition co
   return sqrt( momementumResidualNorm * momementumResidualNorm + massResidualNorm * massResidualNorm );
 }
 
-void SinglePhasePoromechanicsSolver::createPreconditioner()
+void SinglePhasePoromechanicsSolver::createPreconditioner( DomainPartition & domain )
 {
-  if( m_linearSolverParameters.get().preconditionerType == LinearSolverParameters::PreconditionerType::block )
+  LinearSolverParameters & linParams = m_linearSolverParameters.get();
+  if( linParams.preconditionerType == LinearSolverParameters::PreconditionerType::block )
   {
     auto precond = std::make_unique< BlockPreconditioner< LAInterface > >( BlockShapeOption::UpperTriangular,
                                                                            SchurComplementOption::RowsumDiagonalProbing,
@@ -316,6 +317,10 @@ void SinglePhasePoromechanicsSolver::createPreconditioner()
                          std::move( flowPrecond ) );
 
     m_precond = std::move( precond );
+  }
+  else if( linParams.preconditionerType == LinearSolverParameters::PreconditionerType::multiscale )
+  {
+    m_precond = std::make_unique< MultiscalePreconditioner< LAInterface > >( linParams, domain );
   }
   else
   {

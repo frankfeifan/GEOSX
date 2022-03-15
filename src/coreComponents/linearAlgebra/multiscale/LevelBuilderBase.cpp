@@ -20,6 +20,7 @@
 
 #include "linearAlgebra/interfaces/InterfaceTypes.hpp"
 #include "linearAlgebra/multiscale/MsrsbLevelBuilder.hpp"
+#include "linearAlgebra/multiscale/MsrsbCoupledLevelBuilder.hpp"
 
 namespace geosx
 {
@@ -28,14 +29,21 @@ namespace multiscale
 
 template< typename LAI >
 std::unique_ptr< LevelBuilderBase< LAI > >
-LevelBuilderBase< LAI >::createInstance( string name,
-                                         LinearSolverParameters::Multiscale params )
+LevelBuilderBase< LAI >::create( string name,
+                                 LinearSolverParameters::Multiscale params )
 {
   switch( params.basisType )
   {
     case LinearSolverParameters::Multiscale::BasisType::msrsb:
     {
-      return std::make_unique< MsrsbLevelBuilder< LAI > >( std::move( name ), std::move( params ) );
+      if( params.subParams.empty() )
+      {
+        return std::make_unique< MsrsbLevelBuilder< LAI > >( std::move( name ), std::move( params ) );
+      }
+      else
+      {
+        return std::make_unique< MsrsbCoupledLevelBuilder< LAI > >( std::move( name ), std::move( params ) );
+      }
     }
     default:
     {

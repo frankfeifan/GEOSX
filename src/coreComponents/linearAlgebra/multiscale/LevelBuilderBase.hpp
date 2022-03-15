@@ -47,7 +47,7 @@ public:
   using Operator = LinearOperator< Vector >;
 
   static std::unique_ptr< LevelBuilderBase< LAI > >
-  createInstance( string name, LinearSolverParameters::Multiscale params );
+  create( string name, LinearSolverParameters::Multiscale params );
 
   explicit LevelBuilderBase( string name, LinearSolverParameters::Multiscale params );
 
@@ -59,9 +59,12 @@ public:
 
   virtual Matrix const & matrix() const = 0;
 
+  virtual Operator const & presmoother() const = 0;
+
+  virtual Operator const & postsmoother() const = 0;
+
   virtual void initializeFineLevel( DomainPartition & domain,
                                     DofManager const & dofManager,
-                                    string const & fieldName,
                                     MPI_Comm const & comm ) = 0;
 
   virtual void initializeCoarseLevel( LevelBuilderBase< LAI > & fine ) = 0;

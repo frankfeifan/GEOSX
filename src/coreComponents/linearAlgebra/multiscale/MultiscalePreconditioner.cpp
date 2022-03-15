@@ -84,12 +84,14 @@ void MultiscalePreconditioner< LAI >::createLevels( Matrix const & mat,
   GEOSX_MARK_FUNCTION;
   m_levels.clear();
 
+  auto const levelName = [&]( integer const level ) { return GEOSX_FMT( "{}_L{}", m_params.multiscale.label, level ); };
+
   // create fine level
   {
     m_levels.emplace_back();
     Level & fine = m_levels[0];
-    fine.builder = multiscale::LevelBuilderBase< LAI >::createInstance( m_params.multiscale.fieldName + "_L0", m_params.multiscale );
-    fine.builder->initializeFineLevel( m_domain, dofManager, m_params.multiscale.fieldName, mat.comm() );
+    fine.builder = multiscale::LevelBuilderBase< LAI >::create( levelName( 0 ), m_params.multiscale );
+    fine.builder->initializeFineLevel( m_domain, dofManager, mat.comm() );
     fine.matrix = &mat;
   }
 
@@ -99,8 +101,7 @@ void MultiscalePreconditioner< LAI >::createLevels( Matrix const & mat,
   {
     m_levels.emplace_back();
     Level & coarse = m_levels[levelIndex];
-    string const name = GEOSX_FMT( "{}_L{}", m_params.multiscale.fieldName, levelIndex );
-    coarse.builder = multiscale::LevelBuilderBase< LAI >::createInstance( name, m_params.multiscale );
+    coarse.builder = multiscale::LevelBuilderBase< LAI >::create( levelName( levelIndex ), m_params.multiscale );
     coarse.builder->initializeCoarseLevel( *m_levels[levelIndex - 1].builder );
     coarse.matrix = &coarse.builder->matrix();
 
@@ -111,29 +112,9 @@ void MultiscalePreconditioner< LAI >::createLevels( Matrix const & mat,
     }
     if( coarse.matrix->numLocalRows() <= m_params.multiscale.coarsening.minLocalDof )
     {
-      // Prevent further coarsening locally by setting ratio to 1
+      // HACK: Prevent further coarsening locally by setting ratio to 1
       params.coarsening.ratio.setValues< serialPolicy >( 1.0 );
     }
-  }
-
-  // create smoothers
-  for( size_t levelIndex = 0; levelIndex < m_levels.size() - 1; ++levelIndex )
-  {
-    Level & level = m_levels[levelIndex];
-    // TODO: smoother options from input
-    LinearSolverParameters smoother_params;
-    smoother_params.preconditionerType = m_params.multiscale.smootherType;
-    if( m_params.multiscale.preOrPostSmoothing == LinearSolverParameters::AMG::PreOrPost::pre
-        || m_params.multiscale.preOrPostSmoothing == LinearSolverParameters::AMG::PreOrPost::both )
-    {
-      level.presmoother = LAI::createPreconditioner( smoother_params );
-    }
-    if( m_params.multiscale.preOrPostSmoothing == LinearSolverParameters::AMG::PreOrPost::post
-        || m_params.multiscale.preOrPostSmoothing == LinearSolverParameters::AMG::PreOrPost::both )
-    {
-      level.postsmoother = LAI::createPreconditioner( smoother_params );
-    }
-    // TODO: pre/post smoother could be the same object
   }
 
   // create vectors
@@ -175,25 +156,11 @@ void MultiscalePreconditioner< LAI >::setup( Matrix const & mat )
   }
 
   // compute level operators
+  m_levels[0].builder->compute( mat );
   for( size_t levelIndex = 1; levelIndex < m_levels.size(); ++levelIndex )
   {
-    logMessage( 3, GEOSX_FMT( "computing operator for coarse level {}", levelIndex ) );
+    logMessage( 3, GEOSX_FMT( "computing operators for coarse level {}", levelIndex ) );
     m_levels[levelIndex].builder->compute( *m_levels[levelIndex - 1].matrix );
-  }
-
-  // compute level smoothers
-  logMessage( 3, "setting up smoothers" );
-  for( size_t levelIndex = 0; levelIndex < m_levels.size() - 1; ++levelIndex )
-  {
-    Level & level = m_levels[levelIndex];
-    if( level.presmoother )
-    {
-      level.presmoother->setup( *level.matrix );
-    }
-    if( level.postsmoother )
-    {
-      level.postsmoother->setup( *level.matrix );
-    }
   }
 
   // setup coarse solver
@@ -223,14 +190,11 @@ void MultiscalePreconditioner< LAI >::apply( Vector const & src,
     Level const & fine = m_levels[levelIndex];
     Level const & coarse = m_levels[levelIndex + 1];
     fine.sol.zero();
-    if( fine.presmoother )
+    for( integer s = 0; s < m_params.multiscale.smoother.numSweeps; ++s )
     {
-      for( integer s = 0; s < m_params.multiscale.numSmootherSweeps; ++s )
-      {
-        fine.presmoother->apply( fine.rhs, fine.tmp );
-        fine.sol.axpy( 1.0, fine.tmp );
-        fine.matrix->residual( fine.tmp, fine.rhs, fine.rhs );
-      }
+      fine.builder->presmoother().apply( fine.rhs, fine.tmp );
+      fine.sol.axpy( 1.0, fine.tmp );
+      fine.matrix->residual( fine.tmp, fine.rhs, fine.rhs );
     }
     coarse.builder->restriction().apply( fine.rhs, coarse.rhs );
   }
@@ -246,14 +210,11 @@ void MultiscalePreconditioner< LAI >::apply( Vector const & src,
     coarse.builder->prolongation().apply( coarse.sol, fine.tmp );
     fine.sol.axpy( 1.0, fine.tmp );
     fine.matrix->residual( fine.tmp, fine.rhs, fine.rhs );
-    if( fine.postsmoother )
+    for( integer s = 0; s < m_params.multiscale.smoother.numSweeps; ++s )
     {
-      for( integer s = 0; s < m_params.multiscale.numSmootherSweeps; ++s )
-      {
-        fine.postsmoother->apply( fine.rhs, fine.tmp );
-        fine.sol.axpy( 1.0, fine.tmp );
-        fine.matrix->residual( fine.tmp, fine.rhs, fine.rhs );
-      }
+      fine.builder->postsmoother().apply( fine.rhs, fine.tmp );
+      fine.sol.axpy( 1.0, fine.tmp );
+      fine.matrix->residual( fine.tmp, fine.rhs, fine.rhs );
     }
   }
 

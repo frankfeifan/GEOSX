@@ -46,9 +46,10 @@ public:
    * @param precond preconditioning operator (must be set up by the user prior to calling solve()/apply())
    * @return an owning pointer to the newly instantiated solver
    */
-  static std::unique_ptr< KrylovSolver< VECTOR > > create( LinearSolverParameters const & parameters,
-                                                           LinearOperator< VECTOR > const & matrix,
-                                                           LinearOperator< VECTOR > const & precond );
+  static std::unique_ptr< KrylovSolver< VECTOR > >
+  create( LinearSolverParameters const & parameters,
+          LinearOperator< VECTOR > const & matrix,
+          LinearOperator< VECTOR > const & precond );
 
   /**
    * @brief Constructor.
@@ -67,10 +68,8 @@ public:
    */
   virtual void solve( Vector const & b, Vector & x ) const = 0;
 
-
   /**
    * @brief Apply operator to a vector.
-   *
    * @param src Input vector (src).
    * @param dst Output vector (dst).
    */

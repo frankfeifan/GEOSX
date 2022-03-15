@@ -60,7 +60,7 @@ public:
     return "MultiscaleObjectManager"; // doesn't matter really
   }
 
-  void viewPackingExclusionList( SortedArray< localIndex > & exclusionList ) const override;
+  std::set< string > getPackingExclusionList() const override;
 
   localIndex numOwnedObjects() const { return m_numOwnedObjects; }
 

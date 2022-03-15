@@ -256,31 +256,38 @@ struct LinearSolverParameters
       msrsb,   ///< Restricted Smoothing Basis Multiscale
     };
 
-    BasisType basisType = BasisType::msrsb;                       ///< type of basis functions
-    string fieldName;                                             ///< DofManager field name, populated by the physics solver
-    integer maxLevels = 5;                                        ///< limit on total number of grid levels
-    integer galerkin = 1;                                         ///< whether to use Galerkin definition R = P^T
-    integer numSmootherSweeps = 1;                                ///< Number of smoother sweeps
-    AMG::PreOrPost preOrPostSmoothing = AMG::PreOrPost::both;     ///< Pre and/or post smoothing [pre,post,both]
-    PreconditionerType smootherType = PreconditionerType::sgs;    ///< Smoother type
-    PreconditionerType coarseType = PreconditionerType::direct;   ///< Coarse solver type
-    array1d< string > boundarySets;                               ///< List of boundary node set names (needed for coarse node detection)
+    // Core parameters
+    BasisType basisType = BasisType::msrsb;                     ///< Type of basis functions
+    string fieldName;                                           ///< DofManager field name, populated by the physics solver
+    integer maxLevels = 5;                                      ///< Limit on total number of grid levels
+    integer galerkin = 1;                                       ///< Whether to use Galerkin definition R = P^T
+    PreconditionerType coarseType = PreconditionerType::direct; ///< Coarse solver type
+    array1d< string > boundarySets;                             ///< List of boundary node set names (needed for coarse node detection)
+    array1d< Multiscale const * > subParams;                    ///< Pointers to multiscale parameters for subproblems
 
-    integer debugLevel = 0;                                       ///< Flag for enabling addition debugging output
+    // Debugging/user-display settings
+    string label;                                               ///< User-displayed label of the scheme
+    integer debugLevel = 0;                                     ///< Flag for enabling addition debugging output
+
+    struct Smoother
+    {
+      PreconditionerType type = PreconditionerType::sgs; ///< Smoother type
+      AMG::PreOrPost preOrPost = AMG::PreOrPost::both;   ///< Pre and/or post smoothing [pre,post,both]
+      integer numSweeps = 1;                             ///< Number of smoother sweeps
+    } smoother;
 
     struct Coarsening
     {
       enum class PartitionType
       {
         metis,    ///< METIS-based
-        rib,      ///< Recursive Inertial Bisection
         cartesian ///< Cartesian (only with internal mesh)
       };
 
-      PartitionType partitionType = PartitionType::metis; ///< partitioning/coarsening method
-      array1d< real64 > ratio;                            ///< coarsening ratio (of coarse-to-fine cells), total or per-dimension
-      localIndex minLocalDof = 0;                         ///< limit of coarsening on current rank
-      globalIndex minGlobalDof = 0;                       ///< limit of coarsening globally (trims the grid hierarchy)
+      PartitionType partitionType = PartitionType::metis; ///< Partitioning/coarsening method
+      array1d< real64 > ratio;                            ///< Coarsening ratio (cell-based), total or per-dimension
+      localIndex minLocalDof = 0;                         ///< Limit of coarsening on current rank
+      globalIndex minGlobalDof = 0;                       ///< Limit of coarsening globally (trims the grid hierarchy)
 
       struct Metis
       {
@@ -299,10 +306,10 @@ struct LinearSolverParameters
 
     struct MsRSB
     {
-      integer maxIter        = 100;        ///< max number of smoothing iterations
-      real64 tolerance       = 1e-3;       ///< smoothing iteration convergence tolerance
-      real64 relaxation      = 2.0 / 3.0;  ///< relaxation parameter for Jacobi smoothing
-      integer checkFrequency = 10;         ///< convergence check frequency
+      integer maxIter        = 100;        ///< Max number of smoothing iterations
+      real64 tolerance       = 1e-3;       ///< Smoothing iteration convergence tolerance
+      real64 relaxation      = 2.0 / 3.0;  ///< Relaxation parameter for Jacobi smoothing
+      integer checkFrequency = 10;         ///< Convergence check frequency
     } msrsb;
   }
   multiscale;
@@ -419,7 +426,6 @@ ENUM_STRINGS( LinearSolverParameters::Multiscale::BasisType,
 /// Declare strings associated with enumeration values.
 ENUM_STRINGS( LinearSolverParameters::Multiscale::Coarsening::PartitionType,
               "metis",
-              "rib",
               "cartesian" );
 
 /// Declare strings associated with enumeration values.

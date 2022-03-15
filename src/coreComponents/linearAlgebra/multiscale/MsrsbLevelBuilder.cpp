@@ -22,6 +22,7 @@
 #include "linearAlgebra/multiscale/MeshData.hpp"
 #include "linearAlgebra/multiscale/MeshUtils.hpp"
 #include "linearAlgebra/multiscale/MsrsbUtils.hpp"
+#include "linearAlgebra/solvers/PreconditionerNull.hpp"
 #include "linearAlgebra/utilities/TransposeOperator.hpp"
 #include "mesh/DomainPartition.hpp"
 #include "mesh/mpiCommunications/CommunicationTools.hpp"
@@ -36,7 +37,47 @@ MsrsbLevelBuilder< LAI >::MsrsbLevelBuilder( string name,
                                              LinearSolverParameters::Multiscale params )
   : LevelBuilderBase< LAI >( std::move( name ), std::move( params ) ),
   m_mesh( m_name )
-{}
+{
+  GEOSX_ASSERT( m_params.subParams.empty() );
+}
+
+template< typename LAI >
+void MsrsbLevelBuilder< LAI >::createSmoothers()
+{
+  LinearSolverParameters smoother_params;
+  smoother_params.preconditionerType = m_params.smoother.type;
+
+  using PreOrPost = LinearSolverParameters::AMG::PreOrPost;
+  PreOrPost const & preOrPost = m_params.smoother.preOrPost;
+
+  m_presmoother = preOrPost == PreOrPost::pre || preOrPost == PreOrPost::both
+                ? LAI::createPreconditioner( smoother_params )
+                : std::make_unique< PreconditionerNull< LAI > >();
+
+  m_postsmoother = preOrPost == PreOrPost::post || preOrPost == PreOrPost::both
+                 ? LAI::createPreconditioner( smoother_params )
+                 : std::make_unique< PreconditionerNull< LAI > >();
+
+  // TODO: pre/post smoother could be the same object
+}
+
+template< typename LAI >
+void MsrsbLevelBuilder< LAI >::initializeFineLevel( DomainPartition & domain,
+                                                    DofManager const & dofManager,
+                                                    MPI_Comm const & comm )
+{
+  GEOSX_MARK_FUNCTION;
+
+  m_numComp = dofManager.numComponents( m_params.fieldName );
+  m_location = dofManager.location( m_params.fieldName );
+  m_mesh.buildFineMesh( domain, dofManager.support( m_params.fieldName ) );
+
+  // Create a "fake" fine matrix (no data, just correct sizes/comms for use at coarse level init)
+  localIndex const numLocalRows = dofManager.numLocalDofs( m_params.fieldName );
+  m_matrix.createWithLocalSize( numLocalRows, numLocalRows, 0, comm );
+
+  createSmoothers();
+}
 
 struct BasisDescription
 {
@@ -211,25 +252,10 @@ void MsrsbLevelBuilder< LAI >::initializeCoarseLevel( LevelBuilderBase< LAI > & 
   m_restriction = msrsb::makeRestriction( m_params, m_prolongation );
 
   // Create a "fake" coarse matrix (no data, just correct sizes/comms), to be computed later
-  localIndex const numLocalDof = coarseMgr.numOwnedObjects() * m_numComp;
-  m_matrix.createWithLocalSize( numLocalDof, numLocalDof, 0, fine.matrix().comm() );
-}
+  localIndex const numLocalRows = coarseMgr.numOwnedObjects() * m_numComp;
+  m_matrix.createWithLocalSize( numLocalRows, numLocalRows, 0, fine.matrix().comm() );
 
-template< typename LAI >
-void MsrsbLevelBuilder< LAI >::initializeFineLevel( DomainPartition & domain,
-                                                    DofManager const & dofManager,
-                                                    string const & fieldName,
-                                                    MPI_Comm const & comm )
-{
-  GEOSX_MARK_FUNCTION;
-
-  m_numComp = dofManager.numComponents( fieldName );
-  m_location = dofManager.location( fieldName );
-  m_mesh.buildFineMesh( domain, dofManager.support( fieldName ) );
-
-  // Create a "fake" fine matrix (no data, just correct sizes/comms for use at coarse level init)
-  localIndex const numLocalDof = dofManager.numLocalDofs( fieldName );
-  m_matrix.createWithLocalSize( numLocalDof, numLocalDof, 0, comm );
+  createSmoothers();
 }
 
 namespace
@@ -412,6 +438,14 @@ void MsrsbLevelBuilder< LAI >::compute( Matrix const & fineMatrix )
 {
   GEOSX_MARK_FUNCTION;
 
+  if( !m_restriction )
+  {
+    // Setting up finest level: just compute smoothers
+    m_presmoother->setup( fineMatrix );
+    m_postsmoother->setup( fineMatrix );
+    return;
+  }
+
   // Compute prolongation
   GEOSX_LOG_RANK_0_IF( m_params.debugLevel >= 2, GEOSX_FMT( "[MsRSB] {}: building iteration matrix", m_name ) );
   Matrix const jacobiMatrix = makeIterationMatrix( fineMatrix,
@@ -458,6 +492,9 @@ void MsrsbLevelBuilder< LAI >::compute( Matrix const & fineMatrix )
     GEOSX_MARK_SCOPE( writeLevelMatrix );
     m_matrix.write( m_name + ".mtx", LAIOutputFormat::MATRIX_MARKET );
   }
+
+  m_presmoother->setup( m_matrix );
+  m_postsmoother->setup( m_matrix );
 }
 
 template< typename LAI >

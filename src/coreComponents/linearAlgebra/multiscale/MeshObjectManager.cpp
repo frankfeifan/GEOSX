@@ -34,9 +34,11 @@ MeshObjectManager::MeshObjectManager( string const & name,
   registerWrapper( viewKeyStruct::dualObjectString(), &m_toDualRelation );
 }
 
-void MeshObjectManager::viewPackingExclusionList( SortedArray< localIndex > & exclusionList ) const
+std::set< string > MeshObjectManager::getPackingExclusionList() const
 {
-  exclusionList.insert( getWrapperIndex( viewKeyStruct::dualObjectString() ) );
+  std::set< string > result = ObjectManagerBase::getPackingExclusionList();
+  result.insert( viewKeyStruct::dualObjectString() );
+  return result;
 }
 
 void MeshObjectManager::setNumOwnedObjects( localIndex const n )

@@ -23,6 +23,59 @@ namespace geosx
 
 using namespace dataRepository;
 
+class SmootherParametersInput : public dataRepository::Group
+{
+public:
+
+  /// Constructor
+  SmootherParametersInput( string const & name,
+                           Group * const parent,
+                           LinearSolverParameters::Multiscale::Smoother & params );
+
+  virtual Group * createChild( string const & childKey, string const & childName ) override final
+  {
+    GEOSX_UNUSED_VAR( childKey, childName );
+    return nullptr;
+  }
+
+  /// Keys appearing in XML
+  struct viewKeyStruct
+  {
+    static constexpr char const * typeString()      { return "type"; }
+    static constexpr char const * preOrPostString() { return "preOrPost"; }
+    static constexpr char const * numSweepsString() { return "numSweeps"; }
+  };
+
+private:
+
+  LinearSolverParameters::Multiscale::Smoother & m_parameters;
+};
+
+SmootherParametersInput::SmootherParametersInput( string const & name,
+                                                  Group * const parent,
+                                                  LinearSolverParameters::Multiscale::Smoother & params )
+  :
+  Group( name, parent ),
+  m_parameters( params )
+{
+  registerWrapper( viewKeyStruct::typeString(), &m_parameters.type ).
+    setDefaultValue( m_parameters.type ).
+    setInputFlag( InputFlags::OPTIONAL ).
+    setDescription( "Smoother type, valid options (not all supported): "
+                    "``" + EnumStrings< LinearSolverParameters::PreconditionerType >::concat( "``, ``" ) + "``" );
+
+  registerWrapper( viewKeyStruct::preOrPostString(), &m_parameters.preOrPost ).
+    setDefaultValue( m_parameters.preOrPost ).
+    setInputFlag( InputFlags::OPTIONAL ).
+    setDescription( "Pre and/or post smoothing, valid options:"
+                    "``" + EnumStrings< LinearSolverParameters::AMG::PreOrPost >::concat( "``, ``" ) + "``" );
+
+  registerWrapper( viewKeyStruct::numSweepsString(), &m_parameters.numSweeps ).
+    setDefaultValue( m_parameters.numSweeps ).
+    setInputFlag( InputFlags::OPTIONAL ).
+    setDescription( "Number of smoothing sweeps" );
+}
+
 class MetisParametersInput : public dataRepository::Group
 {
 public:
@@ -61,7 +114,7 @@ MetisParametersInput::MetisParametersInput( string const & name,
   registerWrapper( viewKeyStruct::methodString(), &m_parameters.method ).
     setApplyDefaultValue( m_parameters.method ).
     setInputFlag( InputFlags::OPTIONAL ).
-    setDescription( "METIS partitioning method, one of: "
+    setDescription( "METIS partitioning method, valid options: "
                     "``" + EnumStrings< LinearSolverParameters::Multiscale::Coarsening::Metis::Method >::concat( "``, ``" ) + "``" );
 
   registerWrapper( viewKeyStruct::minCommonNodesString(), &m_parameters.minCommonNodes ).
@@ -120,7 +173,7 @@ CoarseningParametersInput::CoarseningParametersInput( string const & name,
   registerWrapper( viewKeyStruct::partitionTypeString(), &m_parameters.partitionType ).
     setApplyDefaultValue( m_parameters.partitionType ).
     setInputFlag( InputFlags::OPTIONAL ).
-    setDescription( "Partition type for generating coarse aggregates. Available options are: "
+    setDescription( "Partition type for generating coarse aggregates, valid options: "
                     "``" + EnumStrings< LinearSolverParameters::Multiscale::Coarsening::PartitionType >::concat( "``, ``" ) + "``" );
 
   array1d< real64 > & coarseningRatio = registerWrapper( viewKeyStruct::ratioString(), &m_parameters.ratio ).
@@ -145,7 +198,6 @@ CoarseningParametersInput::CoarseningParametersInput( string const & name,
                  std::make_unique< MetisParametersInput >( groupKeyStruct::metisString(), this, m_parameters.metis ) ).
     setInputFlags( InputFlags::OPTIONAL );
 }
-
 
 class MsrsbParametersInput : public dataRepository::Group
 {
@@ -204,7 +256,6 @@ MsrsbParametersInput::MsrsbParametersInput( string const & name,
     setDescription( "MsRSB basis smoothing convergence check frequency" );
 }
 
-
 class MultiscaleParametersInput : public dataRepository::Group
 {
 public:
@@ -225,9 +276,6 @@ public:
   {
     static constexpr char const * basisTypeString()               { return "basisType"; }
     static constexpr char const * maxLevelsString()               { return "maxLevels"; }
-    static constexpr char const * numSmootherSweepsString()       { return "numSmootherSweeps"; }
-    static constexpr char const * preOrPostSmoothingString()      { return "preOrPostSmoothing"; }
-    static constexpr char const * smootherTypeString()            { return "smootherType"; }
     static constexpr char const * boundarySets()                  { return "boundarySets"; }
     static constexpr char const * debugLevel()                    { return "debugLevel"; }
     static constexpr char const * coarseTypeString()              { return "coarseType"; }
@@ -236,6 +284,7 @@ public:
   /// Keys appearing in XML
   struct groupKeyStruct
   {
+    static constexpr char const * smootherString() { return "Smoother"; }
     static constexpr char const * coarseningString() { return "Coarsening"; }
     static constexpr char const * msrsbString() { return "MsRSB"; }
   };
@@ -263,22 +312,6 @@ MultiscaleParametersInput::MultiscaleParametersInput( string const & name,
     setInputFlag( InputFlags::OPTIONAL ).
     setDescription( "Maximum number of multiscale grid levels (including fine)" );
 
-  registerWrapper( viewKeyStruct::numSmootherSweepsString(), &m_parameters.numSmootherSweeps ).
-    setApplyDefaultValue( m_parameters.numSmootherSweeps ).
-    setInputFlag( InputFlags::OPTIONAL ).
-    setDescription( "Number of smoother sweeps" );
-
-  registerWrapper( viewKeyStruct::preOrPostSmoothingString(), &m_parameters.preOrPostSmoothing ).
-    setApplyDefaultValue( m_parameters.preOrPostSmoothing ).
-    setInputFlag( InputFlags::OPTIONAL ).
-    setDescription( "Pre and/or post smoothing (``" + EnumStrings< LinearSolverParameters::AMG::PreOrPost >::concat( "``, ``" ) + "``)" );
-
-  registerWrapper( viewKeyStruct::smootherTypeString(), &m_parameters.smootherType ).
-    setApplyDefaultValue( m_parameters.smootherType ).
-    setInputFlag( InputFlags::OPTIONAL ).
-    setDescription( "Smoother type. Available options are: "
-                    "``" + EnumStrings< LinearSolverParameters::PreconditionerType >::concat( "``, ``" ) + "``" );
-
   registerWrapper( viewKeyStruct::boundarySets(), &m_parameters.boundarySets ).
     setInputFlag( InputFlags::OPTIONAL ).
     setDescription( "List of node set names that denote global domain boundaries, improves interpolation when provided." );
@@ -293,6 +326,10 @@ MultiscaleParametersInput::MultiscaleParametersInput( string const & name,
     setInputFlag( InputFlags::OPTIONAL ).
     setDescription( "Coarsest level solver type. Available options are: "
                     "``" + EnumStrings< LinearSolverParameters::PreconditionerType >::concat( "``, ``" ) + "``" );
+
+  registerGroup( groupKeyStruct::smootherString(),
+                 std::make_unique< SmootherParametersInput >( groupKeyStruct::smootherString(), this, m_parameters.smoother ) ).
+    setInputFlags( InputFlags::OPTIONAL );
 
   registerGroup( groupKeyStruct::coarseningString(),
                  std::make_unique< CoarseningParametersInput >( groupKeyStruct::coarseningString(), this, m_parameters.coarsening ) ).

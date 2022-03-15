@@ -55,6 +55,10 @@ SinglePhaseFVM< BASE >::SinglePhaseFVM( const string & name,
   BASE( name, parent )
 {
   m_numDofPerCell = 1;
+
+  LinearSolverParameters & linParams = m_linearSolverParameters.get();
+  linParams.multiscale.fieldName = extrinsicMeshData::flow::pressure::key();
+  linParams.multiscale.label = "flow";
 }
 
 template< typename BASE >
@@ -70,13 +74,6 @@ void SinglePhaseFVM< BASE >::initializePreSubGroups()
   {
     GEOSX_ERROR( "A discretization deriving from FluxApproximationBase must be selected with SinglePhaseFVM" );
   }
-}
-
-template< typename BASE >
-void SinglePhaseFVM< BASE >::postProcessInput()
-{
-  LinearSolverParameters & linParams = m_linearSolverParameters.get();
-  linParams.multiscale.fieldName = extrinsicMeshData::flow::pressure::key();
 }
 
 template< typename BASE >

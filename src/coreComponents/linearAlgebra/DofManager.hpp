@@ -57,10 +57,10 @@ class DofManager
 public:
 
   /// Maximum number of components in a field
-  static int constexpr MAX_COMP = 32;
+  static int constexpr maxNumComp = 32;
 
   /// Type of component mask used by DofManager
-  using CompMask = ComponentMask< MAX_COMP >;
+  using CompMask = ComponentMask< maxNumComp >;
 
   /**
    * @brief Describes a selection of components from a DoF field.
@@ -361,7 +361,7 @@ public:
                           string const & srcFieldName,
                           string const & dstFieldName,
                           real64 scalingFactor,
-                          CompMask mask = CompMask( MAX_COMP, true ) ) const;
+                          CompMask mask = CompMask( maxNumComp, true ) ) const;
 
   /**
    * @brief Add values from LA vectors to simulation data arrays.
@@ -376,7 +376,7 @@ public:
                          string const & srcFieldName,
                          string const & dstFieldName,
                          real64 scalingFactor,
-                         CompMask mask = CompMask( MAX_COMP, true ) ) const;
+                         CompMask mask = CompMask( maxNumComp, true ) ) const;
 
   /**
    * @brief Copy values from simulation data arrays to vectors.
@@ -391,7 +391,7 @@ public:
                           string const & srcFieldName,
                           string const & dstFieldName,
                           real64 scalingFactor,
-                          CompMask mask = CompMask( MAX_COMP, true ) ) const;
+                          CompMask mask = CompMask( maxNumComp, true ) ) const;
 
   /**
    * @brief Add values from a simulation data array to a DOF vector.
@@ -406,7 +406,7 @@ public:
                          string const & srcFieldName,
                          string const & dstFieldName,
                          real64 scalingFactor,
-                         CompMask mask = CompMask( MAX_COMP, true ) ) const;
+                         CompMask mask = CompMask( maxNumComp, true ) ) const;
 
   /**
    * @brief Create a dof selection by filtering out excluded components

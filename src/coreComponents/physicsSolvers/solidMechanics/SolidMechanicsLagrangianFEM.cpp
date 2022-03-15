@@ -121,24 +121,14 @@ SolidMechanicsLagrangianFEM::SolidMechanicsLagrangianFEM( const string & name,
     setInputFlag( InputFlags::FALSE ).
     setDescription( "The maximum force contribution in the problem domain." );
 
-}
-
-void SolidMechanicsLagrangianFEM::postProcessInput()
-{
-  SolverBase::postProcessInput();
-
+  // Set physics-dependent parameters for linear solver
   LinearSolverParameters & linParams = m_linearSolverParameters.get();
   linParams.isSymmetric = true;
   linParams.dofsPerNode = 3;
   linParams.amg.separateComponents = true;
   linParams.multiscale.fieldName = keys::TotalDisplacement;
+  linParams.multiscale.label = "mech";
 }
-
-SolidMechanicsLagrangianFEM::~SolidMechanicsLagrangianFEM()
-{
-  // TODO Auto-generated destructor stub
-}
-
 
 void SolidMechanicsLagrangianFEM::registerDataOnMesh( Group & meshBodies )
 {

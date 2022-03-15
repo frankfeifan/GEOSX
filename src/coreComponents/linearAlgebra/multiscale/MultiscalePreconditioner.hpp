@@ -69,8 +69,6 @@ private:
   struct Level
   {
     std::unique_ptr< multiscale::LevelBuilderBase< LAI > > builder;
-    std::unique_ptr< PreconditionerBase< LAI > > presmoother;
-    std::unique_ptr< PreconditionerBase< LAI > > postsmoother;
     Matrix const * matrix; ///< level matrix (operator)
     mutable Vector rhs;    ///< level right-hand side vector
     mutable Vector sol;    ///< level solution
