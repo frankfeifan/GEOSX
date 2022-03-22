@@ -276,11 +276,11 @@ void CellElementSubRegion::fixUpDownMaps( bool const clearIfUnmapped )
                                     clearIfUnmapped );
 }
 
-void CellElementSubRegion::getFaceNodes( localIndex const elementIndex,
-                                         localIndex const localFaceIndex,
-                                         array1d< localIndex > & nodeIndices ) const
+localIndex CellElementSubRegion::getFaceNodes( localIndex const elementIndex,
+                                               localIndex const localFaceIndex,
+                                               Span< localIndex > const nodeIndices ) const
 {
-  geosx::getFaceNodes( m_elementType, elementIndex, localFaceIndex, m_toNodesRelation, nodeIndices );
+  return geosx::getFaceNodes( m_elementType, elementIndex, localFaceIndex, m_toNodesRelation, nodeIndices );
 }
 
 void CellElementSubRegion::

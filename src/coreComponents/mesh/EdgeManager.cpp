@@ -61,12 +61,9 @@ EdgeManager::EdgeManager( string const & name,
     setSizedFromParent( 0 );
 }
 
-EdgeManager::~EdgeManager()
-{}
-
 void EdgeManager::resize( localIndex const newSize )
 {
-  m_toFacesRelation.resize( newSize, 2 * faceMapExtraSpacePerEdge() );
+  m_toFacesRelation.resize( newSize, 2 * faceMapOverallocation() );
   ObjectManagerBase::resize( newSize );
 }
 
@@ -97,7 +94,8 @@ void EdgeManager::buildEdges( localIndex const numNodes,
                               ArrayOfArraysView< localIndex const > const & faceToNodeMap,
                               ArrayOfArrays< localIndex > & faceToEdgeMap )
 {
-  localIndex const numEdges = buildEdgeMaps( numNodes, faceToNodeMap,
+  localIndex const numEdges = buildEdgeMaps( numNodes,
+                                             faceToNodeMap,
                                              faceToEdgeMap,
                                              m_toFacesRelation,
                                              m_toNodesRelation );
@@ -149,27 +147,10 @@ void EdgeManager::setDomainBoundaryObjects( FaceManager const & faceManager )
   }
 }
 
-bool EdgeManager::hasNode( const localIndex edgeID, const localIndex nodeID ) const
+bool EdgeManager::hasNode( const localIndex edgeIndex, const localIndex nodeIndex ) const
 {
-  return m_toNodesRelation( edgeID, 0 ) == nodeID || m_toNodesRelation( edgeID, 1 ) == nodeID;
+  return m_toNodesRelation( edgeIndex, 0 ) == nodeIndex || m_toNodesRelation( edgeIndex, 1 ) == nodeIndex;
 }
-
-//localIndex EdgeManager::FindEdgeFromNodeIDs(const localIndex nodeA, const localIndex nodeB, const NodeManager *
-// nodeManager)
-//{
-//  localIndex val = std::numeric_limits<localIndex>::max();
-//
-//  if (nodeA == nodeB)
-//    return (val);
-//
-//  for( SortedArray<localIndex>::const_iterator iedge=nodeManager->m_nodeToEdgeMap[nodeA].begin() ;
-//       iedge!=nodeManager->m_nodeToEdgeMap[nodeA].end() ; ++iedge )
-//  {
-//    if (hasNode(*iedge, nodeB))
-//      val = *iedge;
-//  }
-//  return(val);
-//}
 
 void EdgeManager::setIsExternal( FaceManager const & faceManager )
 {
@@ -198,7 +179,6 @@ void EdgeManager::setIsExternal( FaceManager const & faceManager )
   }
 }
 
-
 void EdgeManager::extractMapFromObjectForAssignGlobalIndexNumbers( NodeManager const & nodeManager,
                                                                    std::vector< std::vector< globalIndex > > & globalEdgeNodes )
 {
@@ -211,68 +191,22 @@ void EdgeManager::extractMapFromObjectForAssignGlobalIndexNumbers( NodeManager c
 
   globalEdgeNodes.resize( numEdges );
 
-  forAll< parallelHostPolicy >( numEdges, [&]( localIndex const edgeID )
+  forAll< parallelHostPolicy >( numEdges, [&]( localIndex const edgeIndex )
   {
-    std::vector< globalIndex > & curEdgeGlobalNodes = globalEdgeNodes[ edgeID ];
+    std::vector< globalIndex > & curEdgeGlobalNodes = globalEdgeNodes[ edgeIndex ];
 
-    if( isDomainBoundary( edgeID ) )
+    if( isDomainBoundary( edgeIndex ) )
     {
       curEdgeGlobalNodes.resize( 2 );
 
       for( localIndex a = 0; a < 2; ++a )
       {
-        curEdgeGlobalNodes[ a ]= nodeManager.localToGlobalMap()( edgeNodes[ edgeID ][ a ] );
+        curEdgeGlobalNodes[ a ]= nodeManager.localToGlobalMap()( edgeNodes[ edgeIndex ][ a ] );
       }
 
       std::sort( curEdgeGlobalNodes.begin(), curEdgeGlobalNodes.end() );
     }
   } );
-}
-
-
-void EdgeManager::connectivityFromGlobalToLocal( const SortedArray< localIndex > & indices,
-                                                 const map< globalIndex, localIndex > & nodeGlobalToLocal,
-                                                 const map< globalIndex, localIndex > & GEOSX_UNUSED_PARAM( faceGlobalToLocal ) )
-{
-
-
-  for( localIndex const ke : indices )
-  {
-    for( localIndex a=0; a<m_toNodesRelation.size( 1 ); ++a )
-    {
-      const globalIndex gnode = m_toNodesRelation( ke, a );
-      const localIndex lnode = stlMapLookup( nodeGlobalToLocal, gnode );
-      m_toNodesRelation( ke, a ) = lnode;
-    }
-  }
-
-//  array1d<SortedArray<localIndex>>* const edgesToFlowFaces =
-// GetUnorderedVariableOneToManyMapPointer("edgeToFlowFaces");
-//  if( edgesToFlowFaces != NULL )
-//  {
-//    for( SortedArray<localIndex>::const_iterator ke=indices.begin() ; ke!=indices.end() ; ++ke )
-//    {
-//      SortedArray<localIndex>& edgeToFlowFaces = (*edgesToFlowFaces)[*ke];
-//      SortedArray<localIndex> newSet;
-//      for( SortedArray<localIndex>::iterator faceIndex=edgeToFlowFaces.begin() ;
-// faceIndex!=edgeToFlowFaces.end() ; ++faceIndex )
-//      {
-//
-//        std::map<globalIndex,localIndex>::const_iterator MapIter =
-// faceGlobalToLocal.find( static_cast<globalIndex>(*faceIndex) );
-//        if( MapIter!=faceGlobalToLocal.end()  )
-//        {
-////          const localIndex faceLocalIndex = stlMapLookup( faceGlobalToLocal,
-// static_cast<globalIndex>(*faceIndex) );
-//          newSet.insert( MapIter->second );
-//
-//        }
-//      }
-//      edgeToFlowFaces = newSet;
-//    }
-//
-//  }
-
 }
 
 localIndex EdgeManager::packUpDownMapsSize( arrayView1d< localIndex const > const & packList ) const

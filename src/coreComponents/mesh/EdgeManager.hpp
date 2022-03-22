@@ -75,7 +75,7 @@ public:
    *
    * @note Value forwarding is due to refactoring.
    */
-  static localIndex faceMapExtraSpacePerEdge()
+  static constexpr localIndex faceMapOverallocation()
   { return CellBlockManagerABC::faceMapExtraSpacePerEdge(); }
 
   /**
@@ -90,11 +90,6 @@ public:
    */
   EdgeManager( string const & name,
                Group * const parent );
-
-  /**
-   * @brief default destructor
-   */
-  ~EdgeManager() override;
 
   ///@}
 
@@ -217,34 +212,12 @@ public:
                          ArrayOfArraysView< localIndex const > const & facesToEdges );
 
   /**
-   * @brief Build the mapping edge-to-nodes relation from the mapping global to local nodes.
-   * @param[in] indices array of index of the global to local nodes
-   * @param[in] nodeGlobalToLocal map of the global to local nodes
-   * @param[in] faceGlobalToLocal GEOX UNUSED PARAMETER
+   * @brief Check if edge \p edgeIndex contains node \p nodeIndex
+   * @param[in] edgeIndex local index of the edge
+   * @param[in] nodeIndex local index of the node
+   * @return boolean : true if the node \p nodeIndex is part of the edge \p edgeIndex; false otherwise
    */
-  void connectivityFromGlobalToLocal( const SortedArray< localIndex > & indices,
-                                      const map< globalIndex, localIndex > & nodeGlobalToLocal,
-                                      const map< globalIndex, localIndex > & faceGlobalToLocal );
-
-  /**
-   * @brief Split an edge (separate its two extremity nodes)
-   * @param[in] indexToSplit Index of the edge to split
-   * @param[in] parentNodeIndex index of the parent node
-   * @param[in] childNodeIndex index of the child node
-   * @param[in] nodesToEdges array of nodes-to-edges list
-   */
-  void splitEdge( const localIndex indexToSplit,
-                  const localIndex parentNodeIndex,
-                  const localIndex childNodeIndex[2],
-                  array1d< SortedArray< localIndex > > & nodesToEdges );
-
-  /**
-   * @brief Check if edge \p edgeID contains node \p nodeID
-   * @param[in] edgeID local index of the edge
-   * @param[in] nodeID local index of the node
-   * @return boolean : true if the node \p nodeID is part of the edge \p edgeID; false otherwise
-   */
-  bool hasNode( const localIndex edgeID, const localIndex nodeID ) const;
+  bool hasNode( const localIndex edgeIndex, const localIndex nodeIndex ) const;
 
   /**
    * @brief Calculate the center of an edge given its index.
@@ -302,15 +275,6 @@ public:
   viewKeys;
 
   ///}@
-
-  /**
-   * @brief Return the  maximum number of edges per node.
-   * @return Maximum allowable number of edges connected to one node (hardcoded for now)
-   *
-   * @note Value forwarding is due to refactoring.
-   */
-  static constexpr int maxEdgesPerNode()
-  { return CellBlockManagerABC::maxEdgesPerNode(); }
 
   /**
    * @name Getters for stored value.

@@ -78,7 +78,7 @@ public:
    *
    * @note Value forwarding is due to refactoring.
    */
-  static constexpr localIndex nodeMapExtraSpacePerFace()
+  static constexpr localIndex nodeMapOverallocation()
   { return CellBlockManagerABC::nodeMapExtraSpacePerFace(); }
 
   /**
@@ -87,7 +87,7 @@ public:
    *
    * @note Value forwarding is due to refactoring.
    */
-  static constexpr localIndex edgeMapExtraSpacePerFace()
+  static constexpr localIndex edgeMapOverallocation()
   { return CellBlockManagerABC::edgeMapExtraSpacePerFace(); }
 
   /**
@@ -101,27 +101,6 @@ public:
    * @param[in] parent the parent Group object of FaceManager
    */
   FaceManager( string const & name, Group * const parent );
-
-  /**
-   * @brief Destructor override from ObjectManager
-   */
-  virtual ~FaceManager() override;
-
-  /**
-   * @brief Deleted default constructor
-   */
-  FaceManager() = delete;
-
-  /**
-   * @brief Deleted copy constructor
-   */
-  FaceManager( FaceManager const & ) = delete;
-
-
-  /**
-   * @brief Deleted move constructor
-   */
-  FaceManager( FaceManager && ) = delete;
 
   ///@}
 

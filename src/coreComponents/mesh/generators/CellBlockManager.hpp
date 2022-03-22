@@ -43,18 +43,11 @@ public:
   virtual Group * createChild( string const & childKey, string const & childName ) override;
 
   /**
-   * @brief Maximum number of faces allowed (in memory) per each node.
+   * @brief Maximum number of nodes allowed (in memory) per each face.
    * @return The number as an integer.
    */
-  static constexpr int maxFacesPerNode()
-  { return 200; }
-
-  /**
-   * @brief Extra space for node to faces mapping.
-   * @return Number of extra values as an integer.
-   */
-  static constexpr localIndex getFaceMapOverallocation()
-  { return 8; }
+  static constexpr int maxNodesPerFace()
+  { return 64; }
 
   array2d< real64, nodes::REFERENCE_POSITION_PERM > getNodesPositions() const override;
 
@@ -156,7 +149,7 @@ public:
    * @param name The name of the created cell block.
    * @return A reference to the new cell block. The CellBlockManager owns this new instance.
    */
-  CellBlock & registerCellBlock( string name );
+  CellBlock & registerCellBlock( string const & name );
 
   /**
    * @brief Launch kernel function over all the sub-regions
@@ -178,13 +171,13 @@ private:
   };
 
   /**
-   * @brief Get cell block at index @p iCellBlock.
-   * @param[in] iCellBlock The cell block index.
+   * @brief Get cell block at index @p blockIndex.
+   * @param[in] blockIndex The cell block index.
    * @return Const reference to the instance.
    *
    * @note Mainly useful for iteration purposes.
    */
-  const CellBlockABC & getCellBlock( localIndex iCellBlock ) const;
+  CellBlock const & getCellBlock( localIndex const blockIndex ) const;
 
   /**
    * @brief Returns the number of cells blocks

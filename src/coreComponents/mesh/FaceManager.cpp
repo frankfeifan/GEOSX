@@ -16,16 +16,18 @@
  * @file FaceManager.cpp
  */
 
-#include "mesh/ExtrinsicMeshData.hpp"
 #include "FaceManager.hpp"
-#include "NodeManager.hpp"
-#include "BufferOps.hpp"
-#include "common/TimingMacros.hpp"
-#include "ElementRegionManager.hpp"
-#include "utilities/ComputationalGeometry.hpp"
+
 #include "common/GEOS_RAJA_Interface.hpp"
 #include "common/Logger.hpp"
+#include "common/TimingMacros.hpp"
 #include "LvArray/src/tensorOps.hpp"
+#include "mesh/BufferOps.hpp"
+#include "mesh/ElementRegionManager.hpp"
+#include "mesh/ExtrinsicMeshData.hpp"
+#include "mesh/NodeManager.hpp"
+#include "mesh/utilities/MeshMapUtilities.hpp"
+#include "utilities/ComputationalGeometry.hpp"
 
 namespace geosx
 {
@@ -59,103 +61,25 @@ FaceManager::FaceManager( string const &, Group * const parent ):
 
 }
 
-FaceManager::~FaceManager()
-{}
-
 void FaceManager::resize( localIndex const newSize )
 {
-  m_nodeList.resize( newSize, 2 * nodeMapExtraSpacePerFace() );
-  m_edgeList.resize( newSize, 2 * edgeMapExtraSpacePerFace() );
+  m_nodeList.resize( newSize, 2 * nodeMapOverallocation() );
+  m_edgeList.resize( newSize, 2 * edgeMapOverallocation() );
   ObjectManagerBase::resize( newSize );
-}
-
-/**
- * @brief Populates the face to element region and face to element subregion mappings.
- * @param [in] elementRegionManager The ElementRegionManager associated with this mesh level. Regions and subregions come from it.
- * @param [in] f2e The face to element maps (on face may belong to up to 2 elements).
- * @param [in,out] f2er The face to element region map (on face may belong to up to 2 regions).
- * @param [in,out] f2esr The face to element subregion map (on face may belong to up to 2 sub-regions).
- *
- * @warning @p f2er and @p f2esr need to have the correct dimensions (numFaces, 2). Values are all overwritten.
- * @note When a face only points to single one region/sub-region, the second element will equal -1.
- */
-void populateRegions( ElementRegionManager const & elementRegionManager,
-                      arrayView2d< localIndex const > const & f2e,
-                      arrayView2d< localIndex > const & f2er,
-                      arrayView2d< localIndex > const & f2esr )
-{
-  GEOSX_ERROR_IF_NE( f2e.size( 0 ), f2er.size( 0 ) );
-  GEOSX_ERROR_IF_NE( f2e.size( 0 ), f2esr.size( 0 ) );
-  GEOSX_ERROR_IF_NE( 2, f2er.size( 1 ) );
-  GEOSX_ERROR_IF_NE( 2, f2esr.size( 1 ) );
-
-  // -1 is a dummy value meaning there is no region or sub-region associated.
-  // It is possible that a face belongs to one unique region and sub-region.
-  // But the array has length 2 so in that case we put 0.
-  f2er.setValues< serialPolicy >( -1 );
-  f2esr.setValues< serialPolicy >( -1 );
-
-  // The algorithm is equivalent to the algorithm described
-  // in the `populateRegions` in the `NodeManager.cpp` file.
-  // Instead of faces, we'll have nodes.
-  // Please refer to this implementation for thorough explanations.
-  //
-  // Since the algorithm is quite short, and because of slight variations
-  // (e.g. the different allocation between faces and nodes implementation),
-  // I considered acceptable to duplicate it a bit.
-  // This is surely disputable
-
-  // This function `f` will be applied on every sub-region.
-  auto f = [&f2e, &f2er, &f2esr]( localIndex er,
-                                  localIndex esr,
-                                  ElementRegionBase const &,
-                                  CellElementSubRegion const & subRegion ) -> void
-  {
-    for( localIndex iElement = 0; iElement < subRegion.size(); ++iElement )
-    {
-      for( localIndex iFaceLoc = 0; iFaceLoc < subRegion.numFacesPerElement(); ++iFaceLoc )
-      {
-        // iFaceLoc is the node index in the referential of each cell (0 to 5 for a cube, e.g.).
-        // While iFace is the global index of the node.
-        localIndex const & iFace = subRegion.faceList( iElement, iFaceLoc );
-
-        // In standard meshes, a face always belongs to 2 elements.
-        localIndex const numElementsLoc = f2e[iFace].size();
-        for( localIndex iElementLoc = 0; iElementLoc < numElementsLoc; ++iElementLoc )
-        {
-          // We only consider the elements that match the mapping.
-          if( f2e( iFace, iElementLoc ) != iElement )
-          {
-            continue;
-          }
-
-          // Here we fill the mapping iff it has not already been inserted.
-          if( f2er( iFace, iElementLoc ) < 0 or f2esr( iFace, iElementLoc ) < 0 )
-          {
-            f2er( iFace, iElementLoc ) = er;
-            f2esr( iFace, iElementLoc ) = esr;
-
-            // We only want to insert one unique index that has not been inserted,
-            // so we quit the loop on indices here.
-            break;
-          }
-        }
-      }
-    }
-  };
-
-  elementRegionManager.forElementSubRegionsComplete< CellElementSubRegion >( f );
 }
 
 void FaceManager::buildRegionMaps( ElementRegionManager const & elementRegionManager )
 {
   GEOSX_MARK_FUNCTION;
 
-  // Delegating to a free function.
-  populateRegions( elementRegionManager,
-                   m_toElements.m_toElementIndex.toViewConst(),
-                   m_toElements.m_toElementRegion,
-                   m_toElements.m_toElementSubRegion );
+  auto const faceListGetter =
+    []( CellElementSubRegion const & subregion ) -> CellElementSubRegion::FaceMapType const &
+  { return subregion.faceList(); };
+
+  meshMapUtilities::buildToElementMaps( elementRegionManager,
+                                        size(),
+                                        m_toElements,
+                                        faceListGetter );
 }
 
 void FaceManager::buildSets( NodeManager const & nodeManager )
@@ -201,8 +125,6 @@ void FaceManager::setGeometricalRelations( CellBlockManagerABC const & cellBlock
   m_nodeList.base() = cellBlockManager.getFaceToNodes();
   m_edgeList.base() = cellBlockManager.getFaceToEdges();
 
-  m_toElements.m_toElementIndex = cellBlockManager.getFaceToElements();
-
   computeGeometry( nodeManager );
 }
 
@@ -221,12 +143,12 @@ void FaceManager::computeGeometry( NodeManager const & nodeManager )
   arrayView2d< real64 const, nodes::REFERENCE_POSITION_USD > const & X = nodeManager.referencePosition();
 
   // loop over faces and calculate faceArea, faceNormal and faceCenter
-  forAll< parallelHostPolicy >( this->size(), [&]( localIndex const faceID )
+  forAll< parallelHostPolicy >( this->size(), [&]( localIndex const faceIndex )
   {
-    m_faceArea[ faceID ] = computationalGeometry::centroid_3DPolygon( m_nodeList[ faceID ],
-                                                                      X,
-                                                                      m_faceCenter[ faceID ],
-                                                                      m_faceNormal[ faceID ] );
+    m_faceArea[ faceIndex ] = computationalGeometry::centroid_3DPolygon( m_nodeList[ faceIndex ],
+                                                                         X,
+                                                                         m_faceCenter[ faceIndex ],
+                                                                         m_faceNormal[ faceIndex ] );
 
   } );
 }
@@ -274,30 +196,32 @@ void FaceManager::sortAllFaceNodes( NodeManager const & nodeManager,
   elemManager.forElementSubRegions< CellElementSubRegion >( [&] ( CellElementSubRegion const & subRegion )
   { subRegion.calculateElementCenters( X ); } );
 
-  forAll< parallelHostPolicy >( size(), [&]( localIndex const iFace ) -> void
+  forAll< parallelHostPolicy >( size(), [&]( localIndex const faceIndex ) -> void
   {
     // The face should be connected to at least one element.
-    if( facesToElements( iFace, 0 ) != -1 or facesToElements( iFace, 1 ) != -1 )
+    if( facesToElements( faceIndex, 0 ) != -1 or facesToElements( faceIndex, 1 ) != -1 )
     {
       // Take the first defined face-to-(elt/region/sub region) to sorting direction.
-      localIndex const iElemLoc = facesToElements( iFace, 0 ) > -1 ? 0 : 1;
+      localIndex const iElemLoc = facesToElements( faceIndex, 0 ) > -1 ? 0 : 1;
 
-      localIndex const er = facesToElementRegions[iFace][iElemLoc], esr = facesToElementSubRegions[iFace][iElemLoc], ei = facesToElements( iFace, iElemLoc );
+      localIndex const er = facesToElementRegions[faceIndex][iElemLoc];
+      localIndex const esr = facesToElementSubRegions[faceIndex][iElemLoc];
+      localIndex const ei = facesToElements( faceIndex, iElemLoc );
       if( er != -1 and esr != -1 and ei != -1 )
       {
         CellElementSubRegion const & subRegion = elemManager.getRegion( er ).getSubRegion< CellElementSubRegion >( esr );
         arrayView2d< real64 const > const elemCenter = subRegion.getElementCenter();
-        localIndex const numFaceNodes = facesToNodes.sizeOfArray( iFace );
-        sortFaceNodes( X, elemCenter[ei], facesToNodes[iFace], numFaceNodes );
+        localIndex const numFaceNodes = facesToNodes.sizeOfArray( faceIndex );
+        sortFaceNodes( X, elemCenter[ei], facesToNodes[faceIndex], numFaceNodes );
       }
       else
       {
-        GEOSX_ERROR( "Face " << iFace << " is connected to at least one invalid region (" << er << "), sub-region (" << esr << ") or element (" << ei << ")." );
+        GEOSX_ERROR( "Face " << faceIndex << " is connected to at least one invalid region (" << er << "), sub-region (" << esr << ") or element (" << ei << ")." );
       }
     }
     else
     {
-      GEOSX_ERROR( "Face " << iFace << " does not seem connected to any element." );
+      GEOSX_ERROR( "Face " << faceIndex << " does not seem connected to any element." );
     }
   } );
 }
@@ -403,18 +327,18 @@ void FaceManager::extractMapFromObjectForAssignGlobalIndexNumbers( NodeManager c
 
   globalFaceNodes.resize( numFaces );
 
-  forAll< parallelHostPolicy >( numFaces, [&]( localIndex const & faceID )
+  forAll< parallelHostPolicy >( numFaces, [&]( localIndex const & faceIndex )
   {
-    std::vector< globalIndex > & curFaceGlobalNodes = globalFaceNodes[ faceID ];
+    std::vector< globalIndex > & curFaceGlobalNodes = globalFaceNodes[ faceIndex ];
 
-    if( isDomainBoundary( faceID ) )
+    if( isDomainBoundary( faceIndex ) )
     {
-      localIndex const numNodes = faceToNodeMap.sizeOfArray( faceID );
+      localIndex const numNodes = faceToNodeMap.sizeOfArray( faceIndex );
       curFaceGlobalNodes.resize( numNodes );
 
       for( localIndex a = 0; a < numNodes; ++a )
       {
-        curFaceGlobalNodes[ a ]= nodeManager.localToGlobalMap()( faceToNodeMap( faceID, a ) );
+        curFaceGlobalNodes[ a ]= nodeManager.localToGlobalMap()( faceToNodeMap( faceIndex, a ) );
       }
 
       std::sort( curFaceGlobalNodes.begin(), curFaceGlobalNodes.end() );

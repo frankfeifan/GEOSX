@@ -63,8 +63,8 @@ public:
    *
    * @note Value forwarding is due to refactoring.
    */
-  static constexpr inline localIndex getEdgeMapOverallocation()
-  { return CellBlockManagerABC::getEdgeMapOverallocation(); }
+  static constexpr localIndex getEdgeMapOverallocation()
+  { return CellBlockManagerABC::edgeMapExtraSpacePerNode(); }
 
   /**
    * @brief return default size of the value in the node-to-face mapping
@@ -72,15 +72,15 @@ public:
    *
    * @note Value forwarding is due to refactoring.
    */
-  static constexpr inline localIndex getFaceMapOverallocation()
-  { return CellBlockManagerABC::getEdgeMapOverallocation(); }
+  static constexpr localIndex getFaceMapOverallocation()
+  { return CellBlockManagerABC::faceMapExtraSpacePerNode(); }
 
   /**
    * @brief return default size of the value array in the node-to-element mapping
    * @return default size of value array in the node-to-element mapping
    */
-  static constexpr inline localIndex getElemMapOverAllocation()
-  { return CellBlockManagerABC::getElemMapOverAllocation(); }
+  static constexpr localIndex getElemMapOverAllocation()
+  { return CellBlockManagerABC::elemMapExtraSpacePerNode(); }
 
 /**
  * @name Constructors/destructor

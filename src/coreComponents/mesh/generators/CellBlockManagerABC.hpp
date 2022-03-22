@@ -41,24 +41,24 @@ public:
   }
 
   /**
-   * @brief Maximum number of edges allowed (in memory) per each node.
-   * @return The number as an integer.
-   */
-  static constexpr int maxEdgesPerNode()
-  { return 200; }
-
-  /**
    * @brief Extra space for node to edges mapping.
    * @return Number of extra values as an integer.
    */
-  static constexpr localIndex getEdgeMapOverallocation()
+  static constexpr localIndex edgeMapExtraSpacePerNode()
+  { return 8; }
+
+  /**
+   * @brief Extra space for node to faces mapping.
+   * @return Number of extra values as an integer.
+   */
+  static constexpr localIndex faceMapExtraSpacePerNode()
   { return 8; }
 
   /**
    * @brief Extra space for node to elements mapping.
    * @return Number of extra values as an integer.
    */
-  static constexpr localIndex getElemMapOverAllocation()
+  static constexpr localIndex elemMapExtraSpacePerNode()
   { return 8; }
 
   /**

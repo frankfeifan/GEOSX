@@ -580,6 +580,9 @@ void ProblemManager::generateMesh()
       edgeManager.setGeometricalRelations( cellBlockManager );
       faceManager.setGeometricalRelations( cellBlockManager, nodeManager );
 
+      nodeManager.buildRegionMaps( elemManager );
+      faceManager.buildRegionMaps( elemManager );
+
       nodeManager.constructGlobalToLocalMap( cellBlockManager );
 
       // Edge, face and element region managers rely on the sets provided by the node manager.
@@ -594,9 +597,6 @@ void ProblemManager::generateMesh()
       nodeManager.setupRelatedObjectsInRelations( edgeManager, faceManager, elemManager );
       edgeManager.setupRelatedObjectsInRelations( nodeManager, faceManager );
       faceManager.setupRelatedObjectsInRelations( nodeManager, edgeManager, elemManager );
-
-      nodeManager.buildRegionMaps( elemManager );
-      faceManager.buildRegionMaps( elemManager );
 
       // Node and edge managers rely on the boundary information provided by the face manager.
       // This is why `faceManager.setDomainBoundaryObjects` is called first.
