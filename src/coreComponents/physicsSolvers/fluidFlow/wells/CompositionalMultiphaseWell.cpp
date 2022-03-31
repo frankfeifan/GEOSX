@@ -1018,13 +1018,13 @@ void CompositionalMultiphaseWell::assembleAccumulationTerms( DomainPartition con
     {
 
       // for now, we do not want to model storage effects in the wells (unless the well is shut)
-      WellControls const & wellControls = getWellControls( subRegion );
-      bool const isWellOpen = wellControls.isWellOpen( m_currentTime + m_currentDt );
-      bool const enableReservoirToWellFlow = wellControls.isProducer() || wellControls.isCrossflowEnabled();
-      if( isWellOpen && enableReservoirToWellFlow )
-      {
-        return;
-      }
+      // WellControls const & wellControls = getWellControls( subRegion );
+      // bool const isWellOpen = wellControls.isWellOpen( m_currentTime + m_currentDt );
+      // bool const enableReservoirToWellFlow = wellControls.isProducer() || wellControls.isCrossflowEnabled();
+      // if( isWellOpen && enableReservoirToWellFlow )
+      // {
+      //   return;
+      // }
 
       // get the degrees of freedom and ghosting info
       arrayView1d< globalIndex const > const & wellElemDofNumber =
@@ -1337,10 +1337,10 @@ void CompositionalMultiphaseWell::computePerforationRates( MeshLevel const & mes
   // therefore, we do not want to compute perforation rates and we simply assume they are zero
   WellControls const & wellControls = getWellControls( subRegion );
   bool const disableReservoirToWellFlow = wellControls.isInjector() and !wellControls.isCrossflowEnabled();
-  if( !wellControls.isWellOpen( m_currentTime + m_currentDt ) )
-  {
-    return;
-  }
+  // if( !wellControls.isWellOpen( m_currentTime + m_currentDt ) )
+  // {
+  //   return;
+  // }
 
   PerforationData * const perforationData = subRegion.getPerforationData();
 
@@ -1517,9 +1517,9 @@ void CompositionalMultiphaseWell::chopNegativeDensities( DomainPartition & domai
             real64 const newDens = wellElemCompDens[iwelem][ic] + dWellElemCompDens[iwelem][ic];
             // we allowed for some densities to be slightly negative in CheckSystemSolution
             // if the new density is negative, chop back to zero
-            if( newDens < 0 )
+            if( newDens < 1e-4 )
             {
-              dWellElemCompDens[iwelem][ic] = -wellElemCompDens[iwelem][ic];
+              dWellElemCompDens[iwelem][ic] = -wellElemCompDens[iwelem][ic] + 1e-4;
             }
           }
         }

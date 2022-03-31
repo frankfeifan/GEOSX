@@ -207,10 +207,11 @@ void CompositionalMultiphaseReservoir::assembleCouplingTerms( real64 const time_
       ( wellControls.isInjector() ) && wellControls.isCrossflowEnabled() &&
       getLogLevel() >= 1; // since detect crossflow requires communication, we detect it only if the logLevel is sufficiently high
 
-    if( !wellControls.isWellOpen( time_n + dt ) )
-    {
-      return;
-    }
+    // if( !wellControls.isWellOpen( time_n + dt ) )
+    // {
+    //   return;
+    // }
+    GEOSX_UNUSED_VAR( time_n );
 
     PerforationData const * const perforationData = subRegion.getPerforationData();
 

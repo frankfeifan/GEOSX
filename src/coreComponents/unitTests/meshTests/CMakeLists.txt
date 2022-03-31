@@ -13,11 +13,11 @@ set( gtest_geosx_mpi_tests
      testNeighborCommunicator.cpp
      )
 
-if( ENABLE_PAMELA )
-  list( APPEND gtest_geosx_tests
-        testPAMELAImport.cpp
-        )
-endif()
+# if( ENABLE_PAMELA )
+#   list( APPEND gtest_geosx_tests
+#         testPAMELAImport.cpp
+#         )
+# endif()
 
 if( ENABLE_VTK )
   list( APPEND gtest_geosx_tests

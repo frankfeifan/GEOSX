@@ -266,10 +266,10 @@ void WellControls::postProcessInput()
     FunctionManager & functionManager = FunctionManager::getInstance();
     m_targetBHPTable = &(functionManager.getGroup< TableFunction >( m_targetBHPTableName ));
 
-    GEOSX_THROW_IF( m_targetBHPTable->getInterpolationMethod() != TableFunction::InterpolationType::Lower,
-                    "WellControls '" << getName() << "': The interpolation method for the time-dependent rate table "
-                                     << m_targetBHPTable->getName() << " should be TableFunction::InterpolationType::Lower",
-                    InputError );
+    // GEOSX_THROW_IF( m_targetBHPTable->getInterpolationMethod() != TableFunction::InterpolationType::Lower,
+    //                 "WellControls '" << getName() << "': The interpolation method for the time-dependent rate table "
+    //                                  << m_targetBHPTable->getName() << " should be TableFunction::InterpolationType::Lower",
+    //                 InputError );
   }
 
   // 9) Create time-dependent total rate table
@@ -283,10 +283,10 @@ void WellControls::postProcessInput()
     FunctionManager & functionManager = FunctionManager::getInstance();
     m_targetTotalRateTable = &(functionManager.getGroup< TableFunction >( m_targetTotalRateTableName ));
 
-    GEOSX_THROW_IF( m_targetTotalRateTable->getInterpolationMethod() != TableFunction::InterpolationType::Lower,
-                    "WellControls '" << getName() << "': The interpolation method for the time-dependent rate table "
-                                     << m_targetTotalRateTable->getName() << " should be TableFunction::InterpolationType::Lower",
-                    InputError );
+    // GEOSX_THROW_IF( m_targetTotalRateTable->getInterpolationMethod() != TableFunction::InterpolationType::Lower,
+    //                 "WellControls '" << getName() << "': The interpolation method for the time-dependent rate table "
+    //                                  << m_targetTotalRateTable->getName() << " should be TableFunction::InterpolationType::Lower",
+    //                 InputError );
   }
 
   // 10) Create time-dependent phase rate table
