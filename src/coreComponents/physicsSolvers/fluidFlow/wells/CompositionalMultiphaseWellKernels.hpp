@@ -27,9 +27,9 @@
 #include "constitutive/relativePermeability/RelativePermeabilityExtrinsicData.hpp"
 #include "mesh/ElementRegionManager.hpp"
 #include "mesh/ObjectManagerBase.hpp"
-#include "physicsSolvers/fluidFlow/CompositionalMultiphaseBaseKernels.hpp"
 #include "physicsSolvers/fluidFlow/CompositionalMultiphaseBaseExtrinsicData.hpp"
 #include "physicsSolvers/fluidFlow/FlowSolverBaseExtrinsicData.hpp"
+#include "physicsSolvers/fluidFlow/IsothermalCompositionalMultiphaseBaseKernels.hpp"
 #include "physicsSolvers/fluidFlow/StencilAccessors.hpp"
 #include "physicsSolvers/fluidFlow/wells/CompositionalMultiphaseWellExtrinsicData.hpp"
 #include "physicsSolvers/fluidFlow/wells/WellControls.hpp"
@@ -509,12 +509,11 @@ struct RateInitializationKernel
  * @brief Define the interface for the property kernel in charge of computing the total mass density
  */
 template< integer NUM_COMP, integer NUM_PHASE >
-class TotalMassDensityKernel : public compositionalMultiphaseBaseKernels::PropertyKernelBase< NUM_COMP >
+class TotalMassDensityKernel : public isothermalCompositionalMultiphaseBaseKernels::PropertyKernelBase< NUM_COMP >
 {
 public:
 
-  using Base = compositionalMultiphaseBaseKernels::PropertyKernelBase< NUM_COMP >;
-
+  using Base = isothermalCompositionalMultiphaseBaseKernels::PropertyKernelBase< NUM_COMP >;
   using Base::numComp;
 
   /// Compile time value for the number of phases
@@ -545,10 +544,10 @@ public:
    * @param[in] ei the element index
    * @param[in] totalMassDensityKernelOp the function used to customize the kernel
    */
-  template< typename FUNC = compositionalMultiphaseBaseKernels::NoOpFunc >
+  template< typename FUNC = isothermalCompositionalMultiphaseBaseKernels::NoOpFunc >
   GEOSX_HOST_DEVICE
   void compute( localIndex const ei,
-                FUNC && totalMassDensityKernelOp = compositionalMultiphaseBaseKernels::NoOpFunc{} ) const
+                FUNC && totalMassDensityKernelOp = isothermalCompositionalMultiphaseBaseKernels::NoOpFunc{} ) const
   {
     using Deriv = multifluid::DerivativeOffset;
 
@@ -634,7 +633,7 @@ public:
   {
     if( numPhase == 2 )
     {
-      compositionalMultiphaseBaseKernels::internal::kernelLaunchSelectorCompSwitch( numComp, [&] ( auto NC )
+      isothermalCompositionalMultiphaseBaseKernels::internal::kernelLaunchSelectorCompSwitch( numComp, [&] ( auto NC )
       {
         integer constexpr NUM_COMP = NC();
         TotalMassDensityKernel< NUM_COMP, 2 > kernel( subRegion, fluid );
@@ -643,7 +642,7 @@ public:
     }
     else if( numPhase == 3 )
     {
-      compositionalMultiphaseBaseKernels::internal::kernelLaunchSelectorCompSwitch( numComp, [&] ( auto NC )
+      isothermalCompositionalMultiphaseBaseKernels::internal::kernelLaunchSelectorCompSwitch( numComp, [&] ( auto NC )
       {
         integer constexpr NUM_COMP = NC();
         TotalMassDensityKernel< NUM_COMP, 3 > kernel( subRegion, fluid );

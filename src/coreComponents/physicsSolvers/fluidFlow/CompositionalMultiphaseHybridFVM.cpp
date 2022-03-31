@@ -28,9 +28,9 @@
 #include "finiteVolume/MimeticInnerProductDispatch.hpp"
 #include "mesh/mpiCommunications/CommunicationTools.hpp"
 #include "physicsSolvers/fluidFlow/CompositionalMultiphaseBaseExtrinsicData.hpp"
-#include "physicsSolvers/fluidFlow/CompositionalMultiphaseBaseKernels.hpp"
 #include "physicsSolvers/fluidFlow/CompositionalMultiphaseHybridFVMKernels.hpp"
 #include "physicsSolvers/fluidFlow/FlowSolverBaseExtrinsicData.hpp"
+#include "physicsSolvers/fluidFlow/IsothermalCompositionalMultiphaseBaseKernels.hpp"
 #include "physicsSolvers/fluidFlow/SinglePhaseHybridFVMKernels.hpp"
 
 /**
@@ -41,7 +41,7 @@ namespace geosx
 
 using namespace dataRepository;
 using namespace constitutive;
-using namespace compositionalMultiphaseBaseKernels;
+using namespace isothermalCompositionalMultiphaseBaseKernels;
 using namespace compositionalMultiphaseHybridFVMKernels;
 using namespace mimeticInnerProduct;
 
@@ -513,7 +513,7 @@ real64 CompositionalMultiphaseHybridFVM::scalingForSystemSolution( DomainPartiti
     return 1.0;
   }
 
-  real64 constexpr eps = compositionalMultiphaseBaseKernels::minDensForDivision;
+  real64 constexpr eps = isothermalCompositionalMultiphaseBaseKernels::minDensForDivision;
   real64 const maxCompFracChange = m_maxCompFracChange;
   real64 const maxRelativePresChange = m_maxRelativePresChange;
 
@@ -675,18 +675,19 @@ bool CompositionalMultiphaseHybridFVM::checkSystemSolution( DomainPartition cons
         subRegion.getExtrinsicData< extrinsicMeshData::flow::deltaGlobalCompDensity >();
 
       localIndex const subRegionSolutionCheck =
-        compositionalMultiphaseBaseKernels::SolutionCheckKernel::launch< parallelDevicePolicy<>,
-                                                                         parallelDeviceReduce >( localSolution,
-                                                                                                 dofManager.rankOffset(),
-                                                                                                 numFluidComponents(),
-                                                                                                 elemDofNumber,
-                                                                                                 elemGhostRank,
-                                                                                                 elemPres,
-                                                                                                 dElemPres,
-                                                                                                 compDens,
-                                                                                                 dCompDens,
-                                                                                                 m_allowCompDensChopping,
-                                                                                                 scalingFactor );
+        isothermalCompositionalMultiphaseBaseKernels::
+          SolutionCheckKernel::launch< parallelDevicePolicy<>,
+                                       parallelDeviceReduce >( localSolution,
+                                                               dofManager.rankOffset(),
+                                                               numFluidComponents(),
+                                                               elemDofNumber,
+                                                               elemGhostRank,
+                                                               elemPres,
+                                                               dElemPres,
+                                                               compDens,
+                                                               dCompDens,
+                                                               m_allowCompDensChopping,
+                                                               scalingFactor );
       localCheck = std::min( localCheck, subRegionSolutionCheck );
     } );
 
@@ -703,14 +704,15 @@ bool CompositionalMultiphaseHybridFVM::checkSystemSolution( DomainPartition cons
       faceManager.getExtrinsicData< extrinsicMeshData::flow::deltaFacePressure >();
 
     localIndex const faceSolutionCheck =
-      compositionalMultiphaseHybridFVMKernels::SolutionCheckKernel::launch< parallelDevicePolicy<>,
-                                                                            parallelDeviceReduce >( localSolution,
-                                                                                                    dofManager.rankOffset(),
-                                                                                                    faceDofNumber,
-                                                                                                    faceGhostRank,
-                                                                                                    facePres,
-                                                                                                    dFacePres,
-                                                                                                    scalingFactor );
+      compositionalMultiphaseHybridFVMKernels::
+        SolutionCheckKernel::launch< parallelDevicePolicy<>,
+                                     parallelDeviceReduce >( localSolution,
+                                                             dofManager.rankOffset(),
+                                                             faceDofNumber,
+                                                             faceGhostRank,
+                                                             facePres,
+                                                             dFacePres,
+                                                             scalingFactor );
     localCheck = std::min( localCheck, faceSolutionCheck );
 
   } );
@@ -807,7 +809,7 @@ real64 CompositionalMultiphaseHybridFVM::calculateResidualNorm( DomainPartition 
       arrayView1d< real64 const > const & referencePorosity = solid.getReferencePorosity();
 
       real64 subRegionResidualNorm = 0.0;
-      compositionalMultiphaseBaseKernels::
+      isothermalCompositionalMultiphaseBaseKernels::
         ResidualNormKernel::launch< parallelDevicePolicy<>,
                                     parallelDeviceReduce >( localRhs,
                                                             rankOffset,
@@ -867,6 +869,7 @@ void CompositionalMultiphaseHybridFVM::applySystemSolution( DofManager const & d
                                                             DomainPartition & domain )
 {
   GEOSX_MARK_FUNCTION;
+
   // 1. apply the elem-based update
   DofManager::CompMask pressureMask( m_numDofPerCell, 0, 1 );
 
