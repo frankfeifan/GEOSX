@@ -66,7 +66,7 @@ private:
 
   void printLevelInfo() const;
 
-  struct Level
+  struct LevelData
   {
     std::unique_ptr< multiscale::LevelBuilderBase< LAI > > builder;
     Matrix const * matrix; ///< level matrix (operator)
@@ -79,7 +79,7 @@ private:
 
   DomainPartition & m_domain;
 
-  std::vector< Level > m_levels;
+  std::vector< LevelData > m_levels;
 
   std::unique_ptr< PreconditionerBase< LAI > > m_coarse_solver;
 

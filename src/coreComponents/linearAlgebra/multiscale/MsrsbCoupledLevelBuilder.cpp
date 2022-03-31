@@ -37,15 +37,15 @@ MsrsbCoupledLevelBuilder< LAI >::MsrsbCoupledLevelBuilder( string name,
   for( LinearSolverParameters::Multiscale const * const p : m_params.subParams )
   {
     GEOSX_ASSERT_MSG( p != nullptr, "Sub-preconditioner parameters for each block must be set by the solver" );
-    m_builders.emplace_back( std::make_unique< MsrsbLevelBuilder< LAI > >( GEOSX_FMT( "{}_{}", name, p->label ), *p ) );
+    string levelName = GEOSX_FMT( "{}_{}", name, p->label );
+    m_builders.emplace_back( std::make_unique< MsrsbLevelBuilder< LAI > >( std::move( levelName ), *p ) );
   }
 }
 
 template< typename LAI >
 void MsrsbCoupledLevelBuilder< LAI >::createSmoothers( bool const useBlock )
 {
-  using PtrToSmootherGetter = PreconditionerBase< LAI > & ( MsrsbLevelBuilder< LAI >::* )();
-  auto const makeSmoother = [&]( PtrToSmootherGetter const func ) -> std::unique_ptr< PreconditionerBase< LAI > >
+  auto const makeSmoother = [&]( auto const getSmoother ) -> std::unique_ptr< PreconditionerBase< LAI > >
   {
     if( useBlock )
     {
@@ -58,7 +58,7 @@ void MsrsbCoupledLevelBuilder< LAI >::createSmoothers( bool const useBlock )
         LinearSolverParameters params;
         params.preconditionerType = m_params.subParams[i]->smoother.type;
         DofManager::SubComponent comp{ m_params.subParams[i]->fieldName, { m_builders[i]->numComp(), true } };
-        smoother->setupBlock( i, { comp }, &( ( *m_builders[i] ).*func)() );
+        smoother->setupBlock( i, { comp }, getSmoother( *m_builders[i] ) );
         // TODO: reverse block order for post-smoother?
       }
       return smoother;
@@ -75,10 +75,10 @@ void MsrsbCoupledLevelBuilder< LAI >::createSmoothers( bool const useBlock )
   PreOrPost const & preOrPost = m_params.smoother.preOrPost;
 
   m_presmoother = preOrPost == PreOrPost::pre || preOrPost == PreOrPost::both
-                  ? makeSmoother( &MsrsbLevelBuilder< LAI >::presmoother )
+                  ? makeSmoother( []( auto & b ) { return &b.presmoother(); } )
                   : std::make_unique< PreconditionerNull< LAI > >();
   m_postsmoother = preOrPost == PreOrPost::post || preOrPost == PreOrPost::both
-                   ? makeSmoother( &MsrsbLevelBuilder< LAI >::postsmoother )
+                   ? makeSmoother( []( auto & b ) { return &b.postsmoother(); } )
                    : std::make_unique< PreconditionerNull< LAI > >();
 }
 
@@ -88,10 +88,11 @@ void MsrsbCoupledLevelBuilder< LAI >::initializeFineLevel( DomainPartition & dom
                                                            MPI_Comm const & comm )
 {
   localIndex numLocalRows = 0;
-  for( auto & builder : m_builders )
+  for( size_t i = 0; i < m_builders.size(); ++i )
   {
-    builder->initializeFineLevel( domain, dofManager, comm );
-    numLocalRows += builder->matrix().numLocalRows();
+    m_builders[i]->initializeFineLevel( domain, dofManager, comm );
+    m_fields.push_back( { m_params.subParams[i]->fieldName, { m_builders[i]->numComp(), true } } );
+    numLocalRows += m_builders[i]->matrix().numLocalRows();
   }
 
   // Create a "fake" fine matrix (no data, just correct sizes/comms for use at coarse level init)
@@ -105,12 +106,17 @@ void MsrsbCoupledLevelBuilder< LAI >::initializeCoarseLevel( LevelBuilderBase< L
 {
   MsrsbCoupledLevelBuilder< LAI > & fine = dynamicCast< MsrsbCoupledLevelBuilder< LAI > & >( fine_level );
   GEOSX_ASSERT( fine.m_builders.size() == m_builders.size() );
-  localIndex numLocalRows = 0;
+  //localIndex numLocalRows = 0;
   for( size_t i = 0; i < m_builders.size(); ++i )
   {
     m_builders[i]->initializeCoarseLevel( *fine.m_builders[i] );
-    numLocalRows += m_builders[i]->matrix().numLocalRows();
+    m_fields.push_back( fine.m_fields[i] );
+    //numLocalRows += m_builders[i]->matrix().numLocalRows();
   }
+
+  localIndex const numLocalRows =
+    std::accumulate( m_builders.begin(), m_builders.end(), localIndex{},
+                     []( localIndex const s, auto const & b ){ return s + b->matrix().numLocalRows(); } );
 
   // Create a "fake" coarse matrix (no data, just correct sizes/comms), to be computed later
   m_matrix.createWithLocalSize( numLocalRows, numLocalRows, 0, fine.matrix().comm() );
@@ -121,8 +127,13 @@ void MsrsbCoupledLevelBuilder< LAI >::initializeCoarseLevel( LevelBuilderBase< L
 template< typename LAI >
 void MsrsbCoupledLevelBuilder< LAI >::compute( Matrix const & fineMatrix )
 {
-  GEOSX_UNUSED_VAR( fineMatrix );
-  // TODO
+  std::vector< Matrix > blocks( m_builders.size() );
+
+  for( size_t i = 0; i < m_builders.size(); ++i )
+  {
+
+    //m_builders[i]->compute( );
+  }
 }
 
 // -----------------------

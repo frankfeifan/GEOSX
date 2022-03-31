@@ -83,7 +83,7 @@ public:
 
 private:
 
-  void createSmoothers( bool const useBlock );
+  void createSmoothers( bool const getSmoother );
 
   using Base::m_params;
   using Base::m_name;
@@ -96,6 +96,9 @@ private:
 
   /// Level operator matrix
   Matrix m_matrix;
+
+  /// A field description for each sub-block
+  std::vector< DofManager::SubComponent > m_fields;
 
   /// Levels for each sub-problem
   std::vector< std::unique_ptr< MsrsbLevelBuilder< LAI > > > m_builders;

@@ -52,7 +52,7 @@ void MultiscalePreconditioner< LAI >::printLevelInfo() const
 
   for( size_t levelIndex = 0; levelIndex < m_levels.size(); ++levelIndex )
   {
-    Level const & level = m_levels[levelIndex];
+    LevelData const & level = m_levels[levelIndex];
     globalIndex const nrow = level.matrix->numGlobalRows();
     globalIndex const nnz = level.matrix->numGlobalNonzeros();
     globalIndex const prevNrow = levelIndex > 0 ? m_levels[levelIndex-1].matrix->numGlobalRows() : nrow;
@@ -89,7 +89,7 @@ void MultiscalePreconditioner< LAI >::createLevels( Matrix const & mat,
   // create fine level
   {
     m_levels.emplace_back();
-    Level & fine = m_levels[0];
+    LevelData & fine = m_levels[0];
     fine.builder = multiscale::LevelBuilderBase< LAI >::create( levelName( 0 ), m_params.multiscale );
     fine.builder->initializeFineLevel( m_domain, dofManager, mat.comm() );
     fine.matrix = &mat;
@@ -100,7 +100,7 @@ void MultiscalePreconditioner< LAI >::createLevels( Matrix const & mat,
   for( integer levelIndex = 1; levelIndex < m_params.multiscale.maxLevels; ++levelIndex )
   {
     m_levels.emplace_back();
-    Level & coarse = m_levels[levelIndex];
+    LevelData & coarse = m_levels[levelIndex];
     coarse.builder = multiscale::LevelBuilderBase< LAI >::create( levelName( levelIndex ), m_params.multiscale );
     coarse.builder->initializeCoarseLevel( *m_levels[levelIndex - 1].builder );
     coarse.matrix = &coarse.builder->matrix();
@@ -118,7 +118,7 @@ void MultiscalePreconditioner< LAI >::createLevels( Matrix const & mat,
   }
 
   // create vectors
-  for( Level & level : m_levels )
+  for( LevelData & level : m_levels )
   {
     level.rhs.create( level.matrix->numLocalRows(), level.matrix->comm() );
     level.sol.create( level.matrix->numLocalRows(), level.matrix->comm() );
@@ -187,8 +187,8 @@ void MultiscalePreconditioner< LAI >::apply( Vector const & src,
   // down phase
   for( int levelIndex = 0; levelIndex < numLevels - 1; ++levelIndex )
   {
-    Level const & fine = m_levels[levelIndex];
-    Level const & coarse = m_levels[levelIndex + 1];
+    LevelData const & fine = m_levels[levelIndex];
+    LevelData const & coarse = m_levels[levelIndex + 1];
     fine.sol.zero();
     for( integer s = 0; s < m_params.multiscale.smoother.numSweeps; ++s )
     {
@@ -205,8 +205,8 @@ void MultiscalePreconditioner< LAI >::apply( Vector const & src,
   // up phase
   for( int levelIndex = numLevels - 2; levelIndex >= 0; --levelIndex )
   {
-    Level const & fine = m_levels[levelIndex];
-    Level const & coarse = m_levels[levelIndex + 1];
+    LevelData const & fine = m_levels[levelIndex];
+    LevelData const & coarse = m_levels[levelIndex + 1];
     coarse.builder->prolongation().apply( coarse.sol, fine.tmp );
     fine.sol.axpy( 1.0, fine.tmp );
     fine.matrix->residual( fine.tmp, fine.rhs, fine.rhs );
