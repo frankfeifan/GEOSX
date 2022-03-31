@@ -59,10 +59,10 @@
       maxEventDt="2.5e4"
       target="/Solvers/compflow"/>
 
-    <PeriodicEvent
-      name="restarts"
-      timeFrequency="7.5e4"
-      target="/Outputs/sidreRestart"/>
+    <!-- <PeriodicEvent -->
+    <!--   name="restarts" -->
+    <!--   timeFrequency="7.5e4" -->
+    <!--   target="/Outputs/sidreRestart"/> -->
   </Events>
 
   <NumericalMethods>
@@ -217,7 +217,7 @@
     <VTK
       name="vtkOutput"/>
 
-    <Restart
-      name="sidreRestart"/>
+    <!-- <Restart -->
+    <!--   name="sidreRestart"/> -->
   </Outputs>
 </Problem>

@@ -179,6 +179,7 @@ void SinglePhaseReservoir::assembleCouplingTerms( real64 const time_n,
       // {
       //   return;
       // }
+      GEOSX_UNUSED_VAR( time_n );
 
       PerforationData const * const perforationData = subRegion.getPerforationData();
 

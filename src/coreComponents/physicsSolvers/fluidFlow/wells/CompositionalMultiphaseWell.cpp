@@ -1526,9 +1526,9 @@ void CompositionalMultiphaseWell::chopNegativeDensities( DomainPartition & domai
             real64 const newDens = wellElemCompDens[iwelem][ic] + dWellElemCompDens[iwelem][ic];
             // we allowed for some densities to be slightly negative in CheckSystemSolution
             // if the new density is negative, chop back to zero
-            if( newDens < 1e-4 )
+            if( newDens < 1e-10 )
             {
-              dWellElemCompDens[iwelem][ic] = -wellElemCompDens[iwelem][ic] + 1e-4;
+              dWellElemCompDens[iwelem][ic] = -wellElemCompDens[iwelem][ic] + 1e-10;
             }
           }
         }
