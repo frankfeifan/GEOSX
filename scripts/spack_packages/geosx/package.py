@@ -61,6 +61,7 @@ class Geosx(CMakePackage, CudaPackage):
 
     variant('shared', default=True, description='Build Shared Libs.')
     variant('caliper', default=True, description='Build Caliper support.')
+    variant('vtk', default=True, description='Build VTK support.')
         #These shouldn't be here; defined in packages.yaml,not here
     # depends_on('intel-mkl', when='+mkl')
     # variant('mkl', default=False, description='Use the Intel MKL library.')
@@ -104,7 +105,10 @@ class Geosx(CMakePackage, CudaPackage):
     depends_on('umpire+cuda', when='+cuda')
 
     depends_on('chai@2.2.2+openmp~benchmarks~examples')
-    depends_on('chai@2.2.2+cuda', when='+cuda')
+    depends_on('chai+cuda', when='+cuda')
+
+    depends_on('camp@0.1.0')
+    depends_on('camp+cuda', when='+cuda')
 
     # #
     # # IO
@@ -121,7 +125,7 @@ class Geosx(CMakePackage, CudaPackage):
     depends_on('pugixml')
 
     depends_on('fmt@8.0.1 cxxstd=14')
-    depends_on('vtk@9.1.0')
+    depends_on('vtk@9.1.0', when='+vtk')
 
     # #
     # # Math
@@ -371,6 +375,8 @@ class Geosx(CMakePackage, CudaPackage):
                 else:
                     cfg.write(cmake_cache_option('ENABLE_{}'.format(cmake_name), False))
 
+            cfg.write(cmake_cache_entry('{}_DIR'.format('camp'), spec['camp'].prefix + '/lib/cmake/camp'))
+
             io_tpls = (('hdf5', 'HDF5', True),
                        ('conduit', 'CONDUIT', True),
                        ('silo', 'SILO', True),
@@ -378,7 +384,7 @@ class Geosx(CMakePackage, CudaPackage):
                        ('caliper', 'CALIPER', '+caliper' in spec),
                        ('pugixml', 'PUGIXML', True),
                        ('fmt', 'FMT', True),
-                       ('vtk', 'VTK', True))
+                       ('vtk', 'VTK', '+vtk' in spec))
             cfg.write('#{0}\n'.format('-' * 80))
             cfg.write('# IO TPLs\n')
             cfg.write('#{0}\n\n'.format('-' * 80))
