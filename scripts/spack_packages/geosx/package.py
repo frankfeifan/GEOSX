@@ -66,7 +66,6 @@ class Geosx(CMakePackage, CudaPackage):
     # depends_on('intel-mkl', when='+mkl')
     # variant('mkl', default=False, description='Use the Intel MKL library.')
     # variant('essl', default=False, description='Use the IBM ESSL library.')
-    variant('suite-sparse', default=True, description='Build SuiteSparse support.')
     variant('trilinos', default=True, description='Build Trilinos support.')
     variant('hypre', default=True, description='Build HYPRE support.')
     variant('petsc', default=False, description='Build PETSc support.')
@@ -138,7 +137,7 @@ class Geosx(CMakePackage, CudaPackage):
     #depends_on('superlu-dist+int64+openmp', when='~petsc')
     depends_on('superlu-dist@6.3.0+int64+openmp')
 
-    depends_on('suite-sparse@5.10.1+openmp', when='+suite-sparse')
+    depends_on('suite-sparse@5.10.1+openmp')
 
     trilinos_build_options = '+openmp'
     trilinos_packages = '+aztec+stratimikos~amesos2~anasazi~belos~ifpack2~muelu~sacado+thyra'
@@ -414,7 +413,7 @@ class Geosx(CMakePackage, CudaPackage):
             math_tpls = (('metis', 'METIS', True),
                         ('parmetis', 'PARMETIS', True),
                         ('superlu-dist', 'SUPERLU_DIST', True),
-                        ('suite-sparse', 'SUITESPARSE', '+suite-sparse' in spec),
+                        ('suite-sparse', 'SUITESPARSE', True),
                         ('trilinos', 'TRILINOS', '+trilinos' in spec),
                         ('hypre', 'HYPRE', '+hypre' in spec),
                         ('petsc', 'PETSC', '+petsc' in spec))
