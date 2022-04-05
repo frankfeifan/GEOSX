@@ -63,7 +63,7 @@ HistoryMetadata PackCollection::getMetaData( DomainPartition const & domain, loc
   WrapperBase const & targetField = targetObject->getWrapperBase( m_fieldName );
   if( m_setNames.empty() )
   {
-    localIndex const packCount = m_setsIndices[0].size() == 0 ? 1 : m_setsIndices[0].size();
+    localIndex const packCount = m_setsIndices[0].size() == 0 ? 1 : m_setsIndices[0].size(); // TODO CHECK!
     return targetField.getHistoryMetadata( packCount );
 //    return targetField.getHistoryMetadata(2);
   }
